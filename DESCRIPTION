@@ -1,0 +1,46 @@
+Type: Package
+Package: demohaz
+Title: Demographic Hazard Models package
+Version: 0.1.1
+Author: Saige Kelmelis and Michael Holton Price
+Maintainer: Michael Holton Price <michaelholtonprice@sgmail.com>
+Description: demohaz—Demographic Hazard Models
+License: MIT + file LICENSE
+Imports:
+    distr,
+    MCMCpack,
+    numDeriv,
+    parallel,
+    shape,
+    survival,
+    rlang (>= 0.1.2),
+    readr,
+    dplyr,
+    gtools,
+    magrittr,
+    tibble,
+    matrixStats,
+    MASS,
+    condMVNorm,
+    mvtnorm,
+    foreach,
+    doParallel,
+    RColorBrewer
+Suggests:
+    knitr,
+    rmarkdown,
+    testthat,
+    roxygen2,
+    covr,
+    DBI,
+    RMySQL,
+    writexl,
+    httr,
+    rvest
+VignetteBuilder: 
+    knitr
+Encoding: UTF-8
+LazyData: true
+RoxygenNote: 6.1.1
+Depends: 
+    R (>= 3.5)
