@@ -1,6 +1,6 @@
 Type: Package
 Package: demohaz
-Title: Demographic Hazard Models package
+Title: Tools for fitting demographic hazard models
 Version: 0.1.1
 Author: Saige Kelmelis and Michael Holton Price
 Maintainer: Michael Holton Price <michaelholtonprice@sgmail.com>
@@ -37,10 +37,10 @@ Suggests:
     writexl,
     httr,
     rvest
-VignetteBuilder: 
+VignetteBuilder:
     knitr
 Encoding: UTF-8
 LazyData: true
 RoxygenNote: 7.1.1
-Depends: 
+Depends:
     R (>= 3.5)
