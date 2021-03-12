@@ -7,36 +7,9 @@ Maintainer: Michael Holton Price <michaelholtonprice@sgmail.com>
 Description: demohaz—Demographic Hazard Models
 License: MIT + file LICENSE
 Imports:
-    distr,
-    MCMCpack,
-    numDeriv,
-    parallel,
-    shape,
-    survival,
-    rlang (>= 0.1.2),
-    readr,
-    dplyr,
-    gtools,
-    magrittr,
-    tibble,
-    matrixStats,
-    MASS,
-    condMVNorm,
-    mvtnorm,
-    foreach,
-    doParallel,
-    RColorBrewer
+    demogR,
+    Deriv
 Suggests:
-    knitr,
-    rmarkdown,
-    testthat,
-    roxygen2,
-    covr,
-    DBI,
-    RMySQL,
-    writexl,
-    httr,
-    rvest
 VignetteBuilder:
     knitr
 Encoding: UTF-8
