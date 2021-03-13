@@ -16,7 +16,7 @@
 #' to \eqn{x},
 #'
 #' \deqn{\Lambda(x_0,x) = - \frac{a_1}{a_2} (e^{-a_2 x}
-#'                        + e^{-a_2 x_0}) + a_3 (x-x_0)
+#'                        - e^{-a_2 x_0}) + a_3 (x-x_0)
 #'                        + \frac{a_4}{a_5} (e^{a_5 x} - e^{a_5 x_0})}.
 #'
 #' If \eqn{x_0} (optional) is not input it is set equal to 0. The survival and
@@ -225,6 +225,8 @@ hesiler <- function(a, x, x0 = 0) {
 #'   Table 2, Level 15
 #' @param x0 x-offset. The default is 0 (no offset).
 #' @param calc_hessian Whether to calculate the Hessian (default FALSE)
+#' @param temper Whether to use parallel tempering for the optimization (as
+#'   opposed to base R's optim; default FALSE)
 #'
 #' @return A list consisting of the fit (on the transformed variable abar) and
 #'   maximum likelihood estimate of a. Optionally, the Hessian of the
@@ -236,20 +238,39 @@ hesiler <- function(a, x, x0 = 0) {
 fit_siler <- function(x,
                       a0 = c(.175, 1.40, .368 * .01, .075 * .001, .917 * .1),
                       x0 = 0,
-                      calc_hessian = FALSE) {
+                      calc_hessian = FALSE,
+                      temper=FALSE) {
 
   # Create function to calculate the negative log-likelihood for the barred
   # parameter vector
-  nllbar <- function(abar, x, a0) {
+  xmax <- 120
+  a0[4] <- a[4] / exp(a0[5]*xmax)
+  nllbar <- function(abar, x, a0, x0) {
     a <- a0 * exp(abar)
+    a[4] <- a[4] / exp(a[5]*xmax)
     -sum(log(dsiler(x, a, x0)))
   }
 
   # Call optim to do the fit
-  # TODO: consider adding support for parallel tempering
-  fit <- optim(rep(0, 5), nllbar, x = x, a0 = a0)
+  if(temper) {
+    prop_scale_mat <- t(replicate(5,rev(seq(0.001,.1,len=21))))
+    fit <- enneal::par_temper(
+      rep(0,5),
+      nllbar,
+      prop_scale=prop_scale_mat,
+      num_cyc=1000,
+      samps_per_cyc=20,
+      x=x,
+      a0=a0,
+      x0=x0)
+    n <- which.min(unlist(lapply(fit$chains,function(chain){chain$eta_best})))
+    afit <- a0 * exp(fit$chains[[n]]$theta_best)
+  } else {
+    fit <- optim(rep(0, 5), nllbar, x = x, a0 = a0, x0=x0,control=list(maxit=10000))
+    afit <- a0 * exp(fit$par)
+  }
+  afit[4] <- afit[4] * exp(afit[5]*xmax)
 
-  afit <- a0 * exp(fit$par)
   if (calc_hessian) {
     H <- hesiler(afit,x,x0)
     return(list(fit = fit, a = afit, hessian = H))

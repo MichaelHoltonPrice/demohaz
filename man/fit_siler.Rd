@@ -8,7 +8,8 @@ fit_siler(
   x,
   a0 = c(0.175, 1.4, 0.368 * 0.01, 0.075 * 0.001, 0.917 * 0.1),
   x0 = 0,
-  calc_hessian = FALSE
+  calc_hessian = FALSE,
+  temper = FALSE
 )
 }
 \arguments{
@@ -20,6 +21,9 @@ Table 2, Level 15}
 \item{x0}{x-offset. The default is 0 (no offset).}
 
 \item{calc_hessian}{Whether to calculate the Hessian (default FALSE)}
+
+\item{temper}{Whether to use parallel tempering for the optimization (as
+opposed to base R's optim; default FALSE)}
 }
 \value{
 A list consisting of the fit (on the transformed variable abar) and

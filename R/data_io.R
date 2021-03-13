@@ -4,21 +4,26 @@
 #' support reformating of the raw data text files and to make the associated
 #' tests clearer. The following datasets can be loaded:
 #'
-#' Ache       The Ache lifetable (see demogR::life.table)
-#' Hadza      The Hadza lifetable (see demogR::life.table)
-#' Hiwi       The Hiwi lifetable (see demogR::life.table)
-#' Tsimane    The Tsimane lifetable (see demogR::life.table)
+#' Ache       The Ache dataframe or lifetable
+#' Hadza      The Hadza dataframe or lifetable
+#' Hiwi       The Hiwi dataframe or lifetable
+#' Tsimane    The Tsimane dataframe or lifetable
 #'
 #' @param dataset_name Name of the dataset to load
+#' @param lifetable Whether to return the raw data (a dataframe) or the
+#'   lifetable
 #' @return The requested dataset
 #' @export
 #'
-load_demohaz_data <- function(dataset_name) {
+load_demohaz_data <- function(dataset_name,raw=FALSE) {
   if(tolower(dataset_name) == "ache") {
     file_path <- system.file("extdata",
                            "HillHurtadoLifeTable.txt",
                            package="demohaz")
     dataframe <- read.table(file_path,header=TRUE)
+    if(raw) {
+      return(dataframe)
+    }
     lifetable <- demogR::life.table(x=dataframe$Age,
                                     nDx=dataframe$nDx,
                                     nKx=dataframe$nKx,
@@ -31,6 +36,9 @@ load_demohaz_data <- function(dataset_name) {
                              "hadza.txt",
                              package="demohaz")
     dataframe <- read.table(file_path,header=TRUE)
+    if(raw) {
+      return(dataframe)
+    }
     lifetable <- demogR::life.table(x=dataframe$Age,
                                     nDx=dataframe$nDx,
                                     nKx=dataframe$nKx,
@@ -41,6 +49,9 @@ load_demohaz_data <- function(dataset_name) {
                              "hiwi.txt",
                              package="demohaz")
     dataframe <- read.table(file_path,header=TRUE)
+    if(raw) {
+      return(dataframe)
+    }
     lifetable <- demogR::life.table(x=dataframe$Age,
                                     nDx=dataframe$nDx,
                                     nKx=dataframe$nKx,
@@ -51,6 +62,9 @@ load_demohaz_data <- function(dataset_name) {
                              "newtsimane.txt",
                              package="demohaz")
     dataframe <- read.table(file_path,header=TRUE,skip=1)
+    if(raw) {
+      return(dataframe)
+    }
     lifetable <- demogR::life.table(x=dataframe$Age,
                                     nDx=dataframe$nDx,
                                     nKx=dataframe$nKx,

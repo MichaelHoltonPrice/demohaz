@@ -4,10 +4,13 @@
 \alias{load_demohaz_data}
 \title{Load datasets in the demohaz R package}
 \usage{
-load_demohaz_data(dataset_name)
+load_demohaz_data(dataset_name, raw = FALSE)
 }
 \arguments{
 \item{dataset_name}{Name of the dataset to load}
+
+\item{lifetable}{Whether to return the raw data (a dataframe) or the
+lifetable}
 }
 \value{
 The requested dataset
@@ -18,8 +21,8 @@ support reformating of the raw data text files and to make the associated
 tests clearer. The following datasets can be loaded:
 }
 \details{
-Ache       The Ache lifetable (see demogR::life.table)
-Hadza      The Hadza lifetable (see demogR::life.table)
-Hiwi       The Hiwi lifetable (see demogR::life.table)
-Tsimane    The Tsimane lifetable (see demogR::life.table)
+Ache       The Ache dataframe or lifetable
+Hadza      The Hadza dataframe or lifetable
+Hiwi       The Hiwi dataframe or lifetable
+Tsimane    The Tsimane dataframe or lifetable
 }
