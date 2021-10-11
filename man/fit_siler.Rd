@@ -2,12 +2,13 @@
 % Please edit documentation in R/siler.R
 \name{fit_siler}
 \alias{fit_siler}
-\title{Maximum likelihood fit for Siler distribution}
+\title{Maximum likelihood fit for the Siler distribution}
 \usage{
 fit_siler(
   x,
-  a0 = c(0.175, 1.4, 0.368 * 0.01, 0.075 * 0.001, 0.917 * 0.1),
   x0 = 0,
+  alpha = c(0.175, 1.4, 0.368 * 0.01, 0.075 * 0.001, 0.917 * 0.1),
+  xmax = 120,
   calc_hessian = FALSE,
   temper = FALSE
 )
@@ -15,10 +16,11 @@ fit_siler(
 \arguments{
 \item{x}{Locations at which to evaluate probability density function}
 
-\item{a0}{Initial value for optimization. Default from Gage and Dyke 1986,
-Table 2, Level 15}
+\item{x0}{The conditional starting age. The default is 0 (no offset).}
 
-\item{x0}{x-offset. The default is 0 (no offset).}
+\item{alpha}{Initial value for optimization. Default from Gage and Dyke 1986,
+Table 2, Level 15. This is also used for the baseline age in the
+tranformed negative log-likelihood calculation.}
 
 \item{calc_hessian}{Whether to calculate the Hessian (default FALSE)}
 
@@ -33,7 +35,8 @@ A list consisting of the fit (on the transformed variable abar) and
   matrix.
 }
 \description{
-Do a maximum likelihood Siler fit for the input data vector x. To allow
-unconstrained optimization to be used, optimization is done on the
-transformed variable abar = log(a/a0).
+Do a maximum likelihood Siler fit given the input vector of ages, x. To
+allow unconstrained optimization to be used, optimization is done on the
+transformed variable bbar (see the description for the function
+fast_transformed_nllsiler).
 }

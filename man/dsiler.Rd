@@ -7,15 +7,19 @@
 dsiler(x, a, x0 = 0)
 }
 \arguments{
-\item{x}{The parameter vector of ages}
+\item{x}{The vector of ages}
 
 \item{a}{The parameter vector}
 
 \item{x0}{The conditional starting age [default: 0].}
 }
 \value{
-The vector of probability densities (same length as x)
+The probability density evaluated at the locations in the input
+  vector x
 }
 \description{
-Calculate the Siler probability density
+Calculate the Siler probablity density at the locations in the input vector
+x given the parameter vector a. Optionally, a conditional starting age can
+be input. See details in the documentation for hsiler for a definition of
+the Siler hazard and related quantities, including the probability density.
 }

@@ -2,32 +2,22 @@
 % Please edit documentation in R/siler.R
 \name{hsiler}
 \alias{hsiler}
-\title{Siler hazard model}
+\title{Calculate the Siler hazard}
 \usage{
 hsiler(x, a)
 }
 \arguments{
-\item{x}{The parameter vector of ages}
+\item{x}{The vector of ages}
 
 \item{a}{The parameter vector}
-
-\item{qvect}{vector of quantiles}
-
-\item{N}{number of observations}
-
-\item{x0}{The conditional starting age [default: 0].}
 }
 \value{
-A numeric vector of length equal to the input
-
-The vector of hazards (same length as x)
+The hazard evaluated at the locations in the input vector x
 }
 \description{
-\code{dsiler} gives the probability density function, \code{psiler} the
-cumulative density function, \code{qsiler} the quantile function,
-\code{rsiler} random draws, \code{hsiler} the hazard, \code{chsiler} the
-cumulative hazard, \code{ssiler} the survival, \code{nllsiler} the negative
-log-likelihood, and \code{hesiler} the Hessian.
+Calculate the Siler hazard at the locations in the input vector x given
+the parameter vector a. See details for a definition of the Siler hazard
+and related quantities.
 }
 \details{
 The Siler hazard is
@@ -39,11 +29,11 @@ hazard is found by integrating the hazard from some initial point \eqn{x_0}
 to \eqn{x},
 
 \deqn{\Lambda(x_0,x) = - \frac{a_1}{a_2} (e^{-a_2 x}
-                       + e^{-a_2 x_0}) + a_3 (x-x_0)
+                       - e^{-a_2 x_0}) + a_3 (x-x_0)
                        + \frac{a_4}{a_5} (e^{a_5 x} - e^{a_5 x_0})}.
 
-If \eqn{x_0} (optional) is not input it is set equal to 0. The survival and
-cumulative density function are, respectively,
+For all functions, if \eqn{x_0} (optional) is not input it is set equal to
+0. The survival and cumulative density function are, respectively,
 
 \deqn{S(x_0,x) = \exp(-\Lambda(x_0,x))
                = \frac{S(0,x)}{S(0,x_0)} = \frac{S(x)}{S(x_0)}}
@@ -55,12 +45,11 @@ and
 The probability density function is
 
 \deqn{f(x_0,x) = \frac{d}{dx} F(x_0,x) = \lambda(x) S(x_0,x)}.
+
+\code{dsiler} gives the probability density function, \code{psiler} the
+cumulative distribution function, \code{qsiler} the quantile function,
+\code{rsiler} random draws, \code{hsiler} the hazard, \code{chsiler} the
+cumulative hazard, \code{ssiler} the survival, \code{nllsiler} the negative
+log-likelihood, and \code{hesiler} the Hessian. fit_siler performs a robust,
+maximum likelihood fit to yield the best-fit parameter vector a.
 }
-\author{
-Michael Holton Price <MichaelHoltonPrice@gmail.com>
-Calculate the Siler hazard
-}
-\keyword{Siler,}
-\keyword{demography}
-\keyword{hazard,}
-\keyword{survival,}

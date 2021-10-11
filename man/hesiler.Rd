@@ -9,7 +9,7 @@ hesiler(a, x, x0 = 0)
 \arguments{
 \item{a}{The parameter vector}
 
-\item{x}{The parameter vector of ages}
+\item{x}{The vector of ages}
 
 \item{x0}{The conditional starting age [default: 0].}
 }
@@ -17,5 +17,9 @@ hesiler(a, x, x0 = 0)
 The Hessian matrix (5 by 5)
 }
 \description{
-Calculate the Hessian for the Siler distribution
+Given the parameter vector a and the vector of ages x, calculate the Hessian
+for a negative log-likelihood fit.
+
+See details in the documentation for hsiler for a definition of the Siler
+hazard and related quantities.
 }

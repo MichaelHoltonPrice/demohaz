@@ -2,6 +2,7 @@
 
 export(chsiler)
 export(dsiler)
+export(fast_transformed_nllsiler)
 export(fit_siler)
 export(hesiler)
 export(hsiler)

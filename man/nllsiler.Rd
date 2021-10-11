@@ -9,13 +9,17 @@ nllsiler(a, x, x0 = 0)
 \arguments{
 \item{a}{The parameter vector}
 
-\item{x}{The parameter vector of ages}
+\item{x}{The vector of ages}
 
 \item{x0}{The conditional starting age [default: 0].}
 }
 \value{
-The vector of negative log-likelihoods (same length as x)
+The negative log-likelihood (a scalar, not a vector)
 }
 \description{
-Calculate the negative log-likelihood for the Siler distribution
+Given the parameter vector a and the vector of ages x, calculate the Siler
+negative log-likelihood.
+
+See details in the documentation for hsiler for a definition of the Siler
+hazard and related quantities, including the negative log-likelihood.
 }
