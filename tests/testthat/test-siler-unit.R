@@ -6,10 +6,6 @@ xtest <- seq(0,120,by=.1)
 
 x0 <- 10
 
-# TODO: add unit tests for chsiler
-# TODO: add unit tests for siler
-# TODO: add unit tests for dsiler
-
 # Unit test hsiler, the hazard
 expect_equal(
   hsiler(xtest,a0),
@@ -238,4 +234,31 @@ expect_equal(
 expect_equal(
   fit_obj$fit$convergence,
   0
+)
+
+# Unit test fast_transformed_nllsiler, the function for quickly and robustly
+# calculating the negative log-likelihood
+xmax <- 120
+alpha <- a0
+beta <- alpha
+beta[4]
+beta[4] <- alpha[4] * exp(alpha[5] * xmax)
+x <- c(2,2,20,30,110)
+xtable <- table(x)
+xvalues <- as.numeric(names(xtable))
+xcounts <- as.numeric(xtable)
+
+bbar <- rep(0.05,5)
+b <- beta * exp(bbar)
+a <- b
+a[4] <- b[4] / exp(b[5] * xmax)
+
+expect_equal(
+  fast_transformed_nllsiler(bbar,xvalues,xcounts,beta,xmax=xmax),
+  nllsiler(a, x)
+)
+
+expect_equal(
+  fast_transformed_nllsiler(bbar,xvalues,xcounts,beta,xmax=xmax,x0=1),
+  nllsiler(a, x, x0=1)
 )

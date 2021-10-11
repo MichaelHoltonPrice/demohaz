@@ -332,13 +332,6 @@ fit_siler <- function(x,
     return(fast_transformed_nllsiler(bbar,xvalues,xcounts,beta,x0,xmax))
   }
 
-#  a0[4] <- a[4] / exp(a0[5]*xmax)
-#  nllbar <- function(abar, x, a0, x0) {
-#    a <- a0 * exp(abar)
-#    a[4] <- a[4] / exp(a[5]*xmax)
-#    -sum(log(dsiler(x, a, x0)))
-#  }
-
   # Call optim to do the fit
   if(temper) {
     prop_scale_mat <- t(replicate(5,rev(seq(0.001,.1,len=21))))
