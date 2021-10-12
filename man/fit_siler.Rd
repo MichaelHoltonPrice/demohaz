@@ -9,8 +9,7 @@ fit_siler(
   x0 = 0,
   alpha = c(0.175, 1.4, 0.368 * 0.01, 0.075 * 0.001, 0.917 * 0.1),
   xmax = 120,
-  calc_hessian = FALSE,
-  temper = FALSE
+  calc_hessian = FALSE
 )
 }
 \arguments{

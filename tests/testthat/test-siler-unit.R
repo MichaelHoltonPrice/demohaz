@@ -182,7 +182,7 @@ expect_error(
 
 expect_equal(
   names(fit_obj),
-  c("fit","a")
+  c("a", "fit")
 )
 
 expect_equal(
@@ -195,9 +195,24 @@ expect_equal(
   FALSE
 )
 
+expect_equal(
+  names(fit_obj$fit),
+  c("obj_fun","th0","temper","th_temper","hjk_output","th")
+)
+
+expect_equal(
+  length(fit_obj$fit$th),
+  5
+)
+
+expect_equal(
+  any(is.na(fit_obj$fit$th)),
+  FALSE
+)
+
 # 0 for convergence means successful completion
 expect_equal(
-  fit_obj$fit$convergence,
+  fit_obj$fit$hjk_output$convergence,
   0
 )
 
@@ -208,7 +223,7 @@ expect_error(
 
 expect_equal(
   names(fit_obj),
-  c("fit","a","hessian")
+  c("a","fit","hessian")
 )
 
 expect_equal(
@@ -222,6 +237,27 @@ expect_equal(
 )
 
 expect_equal(
+  names(fit_obj$fit),
+  c("obj_fun","th0","temper","th_temper","hjk_output","th")
+)
+
+expect_equal(
+  length(fit_obj$fit$th),
+  5
+)
+
+expect_equal(
+  any(is.na(fit_obj$fit$th)),
+  FALSE
+)
+
+# 0 for convergence means successful completion
+expect_equal(
+  fit_obj$fit$hjk_output$convergence,
+  0
+)
+
+expect_equal(
   dim(fit_obj$hessian),
   c(5,5)
 )
@@ -229,11 +265,6 @@ expect_equal(
 expect_equal(
   any(is.na(fit_obj$hessian)),
   FALSE
-)
-# 0 for convergence means successful completion
-expect_equal(
-  fit_obj$fit$convergence,
-  0
 )
 
 # Unit test fast_transformed_nllsiler, the function for quickly and robustly

@@ -2,7 +2,7 @@
 % Please edit documentation in R/fitting.R
 \name{temper_and_tune}
 \alias{temper_and_tune}
-\title{Solve an minimization problem by doing an initial tempering than fine-tuning
+\title{Solve a minimization problem by doing an initial tempering then fine-tuning
 the optimization usking the Hooke-Jeeves algorithm.}
 \usage{
 temper_and_tune(
@@ -37,5 +37,12 @@ coldest temperature, for all parameter values at each temperature).}
 The best fit parameter vector
 }
 \description{
-Many of the inputs are hard coded....
+This method does robust function minimization by doing an initial
+optimization using the parallel tempering algorithm in the enneal package,
+then fine tuning that optimization using the Hooke-Jeeves algorithm from the
+dfoptim package. The first input is the objective function to be minimized
+and the second input is the starting parameter vector. Optionally, control
+parameters for the tempering can be input (the number of cycles, number of
+samples per cycle, temperature vector, and proposal scaling matrix).
+Additional inputs needed by the objective function can also be input.
 }

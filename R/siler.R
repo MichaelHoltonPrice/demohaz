@@ -255,9 +255,9 @@ hesiler <- function(a, x, x0 = 0) {
   # eta is the log-likelihood
   eta <- function(x,a1,a2,a3,a4,a5,x0) {
     log(a1*exp(-a2*x)+a3+a4*exp(a5*x))
-    + a1*(exp(-a2*x)-exp(-a2*x0))/a2
-    - a3*(x-x0)
-    - a4*(exp(a5*x)-exp(a5*x0))/a5
+    - a1*(exp(-a2*x)-exp(-a2*x0))/a2
+    + a3*(x-x0)
+    + a4*(exp(a5*x)-exp(a5*x0))/a5
   }
 
   # Analytically calculate Hessian diagonals
@@ -311,51 +311,29 @@ fit_siler <- function(x,
                       x0 = 0,
                       alpha = c(.175, 1.40, .368 * .01, .075 * .001, .917 * .1),
                       xmax = 120,
-                      calc_hessian = FALSE,
-                      temper=FALSE) {
-
-  # Create function to calculate the negative log-likelihood for the barred
-  # parameter vector
-  # alpha is the baseline parameter vector in the baseline representation that
-  # follows (a = alpha):
-  # hazard = a1 * exp(-a2*x) + a3 + a4*exp(a5*x)
-  #
-  # beta is the baseline parameter vector in the following representation:
-  # hazard = b1 * exp(-b2*x) + b3 + (b4 / exp(b5*xmax))*exp(b5*x)
+                      calc_hessian = FALSE) {
   beta <- alpha
   beta[4] <- alpha[4] * exp(alpha[5] * xmax)
 
   xtable <- table(x)
   xvalues <- as.numeric(names(xtable))
   xcounts <- as.numeric(xtable)
-  obj_fun <- function(bbar) {
-    return(fast_transformed_nllsiler(bbar,xvalues,xcounts,beta,x0,xmax))
-  }
 
-  # Call optim to do the fit
-  if(temper) {
-    prop_scale_mat <- t(replicate(5,rev(seq(0.001,.1,len=21))))
-    fit <- enneal::par_temper(
-      rep(0,5),
-      obj_fun,
-      prop_scale=prop_scale_mat,
-      num_cyc=1000,
-      samps_per_cyc=20)
-    n <- which.min(unlist(lapply(fit$chains,function(chain){chain$eta_best})))
-    bfit <- beta * exp(fit$chains[[n]]$theta_best)
-  } else {
-    fit <- optim(rep(0, 5), obj_fun,control=list(maxit=10000))
-    bfit <- beta * exp(fit$par)
-  }
-  afit <- bfit
-  afit[4] <- bfit[4] / exp(bfit[5]*xmax)
-#  return(list(fit=fit, afit=afit))
-
+  fit <- temper_and_tune(fast_transformed_nllsiler,
+                         rep(0,5),
+                         xvalues=xvalues,
+                         xcounts=xcounts,
+                         beta=beta,
+                         x0=x0,
+                         xmax=xmax)
+  b <- beta * exp(fit$th)
+  a <- b
+  a[4] <- b[4] / exp(b[5]*xmax)
   if (calc_hessian) {
-    H <- hesiler(afit,x,x0)
-    return(list(fit = fit, a = afit, hessian = H))
+    H <- hesiler(a,x,x0)
+    return(list(a=a, fit=fit, hessian=H))
   } else {
-    return(list(fit = fit, a = afit))
+    return(list(a=a, fit=fit))
   }
 }
 

@@ -53,11 +53,11 @@ expect_equal(
 # and x0=1 (use x0=0.1 rather than x0=10 so that the first two parameters can be
 # accurately fit).
 set.seed(291542) # from random.org
-N <- 1000000
+N <- 500000
 xsamp <- rsiler(N, a0)
 # jitter starting vector for fit so that we don't start already at the optimum.
 a1 <- a0 * runif(5, min = .9, max = 1.1)
-silerFit <- fit_siler(xsamp, alpha=a1, calc_hessian = TRUE)
+silerFit <- fit_siler(xsamp, alpha=a1)
 expect_equal(
   a0,
   silerFit$a, tol = 5e-3
@@ -65,12 +65,14 @@ expect_equal(
 
 set.seed(795075) # from random.org
 x0 <- 0.1
-N <- 1000000
+N <- 500000
 xsamp <- rsiler(N, a0, x0)
 # jitter starting vector for fit so that we don't start already at the optimum.
 a1 <- a0 * runif(5, min = .9, max = 1.1)
-silerFit <- fit_siler(xsamp, a1, x0=x0, calc_hessian = TRUE)
+silerFit <- fit_siler(xsamp, a1, x0=x0)
 expect_equal(
   a0,
   silerFit$a, tol = 5e-3
 )
+
+# TODO: add numerical check of analytical Hessian calculation

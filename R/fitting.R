@@ -1,9 +1,16 @@
 #' @title
-#' Solve an minimization problem by doing an initial tempering than fine-tuning
+#' Solve a minimization problem by doing an initial tempering then fine-tuning
 #' the optimization usking the Hooke-Jeeves algorithm.
 #'
 #' @description
-#' Many of the inputs are hard coded....
+#' This method does robust function minimization by doing an initial
+#' optimization using the parallel tempering algorithm in the enneal package,
+#' then fine tuning that optimization using the Hooke-Jeeves algorithm from the
+#' dfoptim package. The first input is the objective function to be minimized
+#' and the second input is the starting parameter vector. Optionally, control
+#' parameters for the tempering can be input (the number of cycles, number of
+#' samples per cycle, temperature vector, and proposal scaling matrix).
+#' Additional inputs needed by the objective function can also be input.
 #'
 #' @param obj_fun The objective function to minimize
 #' @param th0 The starting point for minimization
