@@ -12,6 +12,8 @@ temper_and_tune(
   samps_per_cyc = 20,
   temp_vect = 10^(rev(seq(-1, 1, by = 0.25))),
   prop_scale_mat = NULL,
+  tol = 1e-10,
+  info = FALSE,
   ...
 )
 }
@@ -30,6 +32,11 @@ temper_and_tune(
 \item{prop_scale_mat}{Proposal scale matrix for the tempering (default:
 ranges evenly from 0.1 for the hottest temperature to 0.001 for the
 coldest temperature, for all parameter values at each temperature).}
+
+\item{tol}{The tolerance for the hjk optimization (default: 1e-10)}
+
+\item{info}{Whether to print out optimization information for the hjk
+optimization (default: FALSE)}
 
 \item{...}{Additional inputs to the objective function}
 }

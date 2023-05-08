@@ -4,12 +4,12 @@
 \alias{hsiler}
 \title{Calculate the Siler hazard}
 \usage{
-hsiler(x, a)
+hsiler(x, b)
 }
 \arguments{
 \item{x}{The vector of ages}
 
-\item{a}{The parameter vector}
+\item{b}{The parameter vector}
 }
 \value{
 The hazard evaluated at the locations in the input vector x
@@ -22,15 +22,15 @@ and related quantities.
 \details{
 The Siler hazard is
 
-\deqn{\lambda(x) = a_1 \exp(-a_2 \, x) + a_3 + a_4 \exp(a_5 \, x)}
+\deqn{\lambda(x) = b_1 \exp(-b_2 \, x) + b_3 + b_5 \exp(b_5 \, (x - b_4))}
 
-where \eqn{a_i} (index notation) is the parameter vector. The cumulative
+where \eqn{b_i} (index notation) is the parameter vector. The cumulative
 hazard is found by integrating the hazard from some initial point \eqn{x_0}
 to \eqn{x},
 
-\deqn{\Lambda(x_0,x) = - \frac{a_1}{a_2} (e^{-a_2 x}
-                       - e^{-a_2 x_0}) + a_3 (x-x_0)
-                       + \frac{a_4}{a_5} (e^{a_5 x} - e^{a_5 x_0})}.
+\deqn{\Lambda(x_0,x) = - \frac{b_1}{b_2} (e^{-b_2 x}
+                       - e^{-b_2 x_0}) + b_3 (x-x_0)
+                       + (e^{b_5 (x - b_4)} - e^{b_5 (x_0 - b_4)})}.
 
 For all functions, if \eqn{x_0} (optional) is not input it is set equal to
 0. The survival and cumulative density function are, respectively,

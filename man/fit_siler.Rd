@@ -7,9 +7,11 @@
 fit_siler(
   x,
   x0 = 0,
-  alpha = c(0.175, 1.4, 0.368 * 0.01, 0.075 * 0.001, 0.917 * 0.1),
-  xmax = 120,
-  calc_hessian = FALSE
+  b0 = c(0.175, 1.4, 0.368 * 0.01, log(0.917 * 0.1/(0.075 * 0.001))/(0.917 * 0.1), 0.917
+    * 0.1),
+  calc_hessian = FALSE,
+  tol = 1e-10,
+  info = FALSE
 )
 }
 \arguments{
@@ -17,18 +19,20 @@ fit_siler(
 
 \item{x0}{The conditional starting age. The default is 0 (no offset).}
 
-\item{alpha}{Initial value for optimization. Default from Gage and Dyke 1986,
+\item{b0}{Initial value for optimization. Default from Gage and Dyke 1986,
 Table 2, Level 15. This is also used for the baseline age in the
 tranformed negative log-likelihood calculation.}
 
 \item{calc_hessian}{Whether to calculate the Hessian (default FALSE)}
 
-\item{temper}{Whether to use parallel tempering for the optimization (as
-opposed to base R's optim; default FALSE)}
+\item{tol}{The tolerance for the hjk optimization (default: 1e-10)}
+
+\item{info}{Whether to print out optimization information for the hjk
+optimization (default: FALSE)}
 }
 \value{
-A list consisting of the fit (on the transformed variable abar) and
-  maximum likelihood estimate of a. Optionally, the Hessian of the
+A list consisting of the fit (on the transformed variable bbar) and
+  maximum likelihood estimate of b. Optionally, the Hessian of the
   log-likelihood is returned, which allows estimation of the standard errors
   of the maximum likelihood estimate via the observed Fisher information
   matrix.

@@ -8,15 +8,15 @@
 #'
 #' @details The Siler hazard is
 #'
-#' \deqn{\lambda(x) = a_1 \exp(-a_2 \, x) + a_3 + a_4 \exp(a_5 \, x)}
+#' \deqn{\lambda(x) = b_1 \exp(-b_2 \, x) + b_3 + b_5 \exp(b_5 \, (x - b_4))}
 #'
-#' where \eqn{a_i} (index notation) is the parameter vector. The cumulative
+#' where \eqn{b_i} (index notation) is the parameter vector. The cumulative
 #' hazard is found by integrating the hazard from some initial point \eqn{x_0}
 #' to \eqn{x},
 #'
-#' \deqn{\Lambda(x_0,x) = - \frac{a_1}{a_2} (e^{-a_2 x}
-#'                        - e^{-a_2 x_0}) + a_3 (x-x_0)
-#'                        + \frac{a_4}{a_5} (e^{a_5 x} - e^{a_5 x_0})}.
+#' \deqn{\Lambda(x_0,x) = - \frac{b_1}{b_2} (e^{-b_2 x}
+#'                        - e^{-b_2 x_0}) + b_3 (x-x_0)
+#'                        + (e^{b_5 (x - b_4)} - e^{b_5 (x_0 - b_4)})}.
 #'
 #' For all functions, if \eqn{x_0} (optional) is not input it is set equal to
 #' 0. The survival and cumulative density function are, respectively,
@@ -40,13 +40,13 @@
 #' maximum likelihood fit to yield the best-fit parameter vector a.
 #'
 #' @param x The vector of ages
-#' @param a The parameter vector
+#' @param b The parameter vector
 #'
 #' @return The hazard evaluated at the locations in the input vector x
 #'
 #' @export
-hsiler <- function(x, a) {
-  return(a[1] * exp(-a[2] * x) + a[3] + a[4] * exp(a[5] * x))
+hsiler <- function(x, b) {
+  return(b[1] * exp(-b[2] * x) + b[3] + b[5] * exp(b[5] * (x - b[4])))
 }
 
 #' @param qvect The vector of quantiles
@@ -57,24 +57,24 @@ hsiler <- function(x, a) {
 #'
 #' @description
 #' Calculate the Siler cumulative hazard at the locations in the input vector x
-#' given the parameter vector a. Optionally, a conditional starting age can be
+#' given the parameter vector b. Optionally, a conditional starting age can be
 #' input. See details in the documentation for hsiler for a definition of the
 #' Siler hazard and related quantities, including the cumulative hazard.
 #'
 #' @param x The vector of ages
-#' @param a	The parameter vector
+#' @param b	The parameter vector
 #' @param x0 The conditional starting age [default: 0].
 #'
 #' @return The cumulative hazard evaluated at the locations in the input vector
 #'   x
 #'
 #' @export
-chsiler <- function(x, a, x0 = 0) {
+chsiler <- function(x, b, x0 = 0) {
   if (x0 == 0) {
-    return(-a[1] / a[2] * (exp(-a[2] * x) - 1) +
-             a[3] * x + a[4] / a[5] * (exp(a[5] * x) - 1))
+    return(-b[1] / b[2] * (exp(-b[2] * x) - 1) +
+             b[3] * x + exp(b[5] * (x - b[4])) - exp(-b[5]*b[4]))
   } else {
-    return(chsiler(x, a) - chsiler(x0, a))
+    return(chsiler(x, b) - chsiler(x0, b))
   }
 }
 
@@ -83,20 +83,20 @@ chsiler <- function(x, a, x0 = 0) {
 #'
 #' @description
 #' Calculate the Siler survival function at the locations in the input vector x
-#' given the parameter vector a. Optionally, a conditional starting age can be
+#' given the parameter vector b. Optionally, a conditional starting age can be
 #' input. See details in the documentation for hsiler for a definition of the
 #' Siler hazard and related quantities, including the survival function.
 #
 #'
 #' @param x The vector of ages
-#' @param a	The parameter vector
+#' @param b	The parameter vector
 #' @param x0 The conditional starting age [default: 0].
 #'
 #' @return The survival evaluated at the locations in the input vector x
 #'
 #' @export
-ssiler <- function(x, a, x0 = 0) {
-  return(exp(-chsiler(x, a, x0)))
+ssiler <- function(x, b, x0 = 0) {
+  return(exp(-chsiler(x, b, x0)))
 }
 
 #' @title
@@ -104,20 +104,20 @@ ssiler <- function(x, a, x0 = 0) {
 #'
 #' @description
 #' Calculate the Siler probablity density at the locations in the input vector
-#' x given the parameter vector a. Optionally, a conditional starting age can
+#' x given the parameter vector b. Optionally, a conditional starting age can
 #' be input. See details in the documentation for hsiler for a definition of
 #' the Siler hazard and related quantities, including the probability density.
 #'
 #' @param x The vector of ages
-#' @param a	The parameter vector
+#' @param b	The parameter vector
 #' @param x0 The conditional starting age [default: 0].
 #'
 #' @return The probability density evaluated at the locations in the input
 #'   vector x
 #'
 #' @export
-dsiler <- function(x, a, x0 = 0) {
-  return(hsiler(x, a) * ssiler(x, a, x0))
+dsiler <- function(x, b, x0 = 0) {
+  return(hsiler(x, b) * ssiler(x, b, x0))
 }
 
 #' @title
@@ -125,21 +125,21 @@ dsiler <- function(x, a, x0 = 0) {
 #'
 #' @description
 #' Calculate the Siler cumulative distribuition function (CDF) at the locations
-#' in the input vector x given the parameter vector a. Optionally, a
+#' in the input vector x given the parameter vector b. Optionally, a
 #' conditional starting age can be input. See details in the documentation for
 #' hsiler for a definition of the Siler hazard and related quantities,
 #' including the CDF.
 #'
 #' @param x The vector of ages
-#' @param a	The parameter vector
+#' @param b	The parameter vector
 #' @param x0 The conditional starting age [default: 0].
 #'
 #' @return The cumulative distribution function evaluated at the locations in
 #' the input vector x
 #'
 #' @export
-psiler <- function(x, a, x0 = 0) {
-  return(1 - ssiler(x, a, x0))
+psiler <- function(x, b, x0 = 0) {
+  return(1 - ssiler(x, b, x0))
 }
 
 #' @title
@@ -150,37 +150,37 @@ psiler <- function(x, a, x0 = 0) {
 #' problem for the cumulative distribution. This is accomplished using the
 #' following change of variables:
 #'
-#' xbar = a5*(x - x0) / (a5*x + 1)
+#' xbar = b5*(x - x0) / (b5*x + 1)
 #'
 #' or, equivalently,
 #'
-#' x = ((xbar/a5) + x0)/(1-xbar).
+#' x = ((xbar/b5) + x0)/(1-xbar).
 #'
 #' xbar lies between 0 to 1, which allows R's root-finder to be invoked on a
-#' bounded interval. Normalizing by a5 regularizes the root finding for large
+#' bounded interval. Normalizing by b5 regularizes the root finding for large
 #' ages where the positive exponential term dominates the hazard.
 #'
 #' See details in the documentation for hsiler for a definition of the Siler
 #' hazard and related quantities.
 #'
 #' @param qvect The vector of quantiles
-#' @param a	The parameter vector
+#' @param b	The parameter vector
 #' @param x0 The conditional starting age [default: 0].
 #'
 #' @return The age, x, evaluated at the locations in the input vector qvect
 #'
 #' @export
-qsiler <- function(qvect, a, x0 = 0) {
+qsiler <- function(qvect, b, x0 = 0) {
   # TODO: consider returning Inf if the quantile is 1.
   N <- length(qvect)
   xvect <- rep(NA, N)
   for (n in 1:N) {
     Sn <- 1 - qvect[n]
     froot <- function(xbar) {
-      log(Sn) + chsiler(((xbar / a[5]) + x0) / (1 - xbar), a, x0)
+      log(Sn) + chsiler(((xbar / b[5]) + x0) / (1 - xbar), b, x0)
     }
     xbar_n <- uniroot(froot, c(0, 1), tol = .Machine$double.eps / 2)$root
-    xvect[n] <- ((xbar_n / a[5]) + x0) / (1 - xbar_n)
+    xvect[n] <- ((xbar_n / b[5]) + x0) / (1 - xbar_n)
   }
   return(xvect)
 }
@@ -190,82 +190,82 @@ qsiler <- function(qvect, a, x0 = 0) {
 #'
 #' @description
 #' Make N random samples from the Siler distribution given the input parameter
-#' vector a and a conditional starting age x0.
+#' vector b and a conditional starting age x0.
 #'
 #' See details in the documentation for hsiler for a definition of the Siler
 #' hazard and related quantities.
 #'
 #' @param N The number of samples to make
-#' @param a	The parameter vector
+#' @param b	The parameter vector
 #' @param x0 The conditional starting age [default: 0].
 #'
 #' @return A vector of N random samples
 #'
 #' @export
-rsiler <- function(N, a, x0 = 0) {
+rsiler <- function(N, b, x0 = 0) {
   cdf <- runif(N)
-  return(qsiler(cdf, a, x0))
+  return(qsiler(cdf, b, x0))
 }
 
 #' @title
 #' Calculate the negative log-likelihood for the Siler distribution
 #'
 #' @description
-#' Given the parameter vector a and the vector of ages x, calculate the Siler
+#' Given the parameter vector b and the vector of ages x, calculate the Siler
 #' negative log-likelihood.
 #'
 #' See details in the documentation for hsiler for a definition of the Siler
 #' hazard and related quantities, including the negative log-likelihood.
 #'
-#' @param a	The parameter vector
+#' @param b	The parameter vector
 #' @param x The vector of ages
 #' @param x0 The conditional starting age [default: 0].
 #'
 #' @return The negative log-likelihood (a scalar, not a vector)
 #'
 #' @export
-nllsiler <- function(a, x, x0 = 0) {
-  # a is the first input as expected by most R optimization routines
-  return(-sum(log(dsiler(x, a, x0))))
+nllsiler <- function(b, x, x0 = 0) {
+  # b is the first input as expected by most R optimization routines
+  return(-sum(log(dsiler(x, b, x0))))
 }
 
 #' @title
 #' Calculate the Hessian for the Siler distribution
 #'
 #' @description
-#' Given the parameter vector a and the vector of ages x, calculate the Hessian
+#' Given the parameter vector b and the vector of ages x, calculate the Hessian
 #' for a negative log-likelihood fit.
 #'
 #' See details in the documentation for hsiler for a definition of the Siler
 #' hazard and related quantities.
 #'
-#' @param a	The parameter vector
+#' @param b	The parameter vector
 #' @param x The vector of ages
 #' @param x0 The conditional starting age [default: 0].
 #'
 #' @return The Hessian matrix (5 by 5)
 #'
 #' @export
-hesiler <- function(a, x, x0 = 0) {
+hesiler <- function(b, x, x0 = 0) {
   # a is the first input as expected by most R optimization routines
-  aStr <- c('a1','a2','a3','a4','a5')
+  bStr <- c('b1','b2','b3','b4','b5')
 
   H <- matrix(NA,5,5) # Initialize the matrix
 
   # eta is the log-likelihood
-  eta <- function(x,a1,a2,a3,a4,a5,x0) {
-    log(a1*exp(-a2*x)+a3+a4*exp(a5*x))
-    - a1*(exp(-a2*x)-exp(-a2*x0))/a2
-    + a3*(x-x0)
-    + a4*(exp(a5*x)-exp(a5*x0))/a5
+  eta <- function(x,b1,b2,b3,b4,b5,x0) {
+    log(b1*exp(-b2*x)+b3+b5*exp(b5*(x-b4)))
+    - b1*(exp(-b2*x)-exp(-b2*x0))/b2
+    + b3*(x-x0)
+    + exp(b5*(x-b4))-exp(b5*(x0-b4))
   }
 
   # Analytically calculate Hessian diagonals
   for(n in 1:5) {
     H[n,n] <- sum(
       Deriv::Deriv(
-        Deriv::Deriv(eta,aStr[n]),
-        aStr[n])(x,a[1],a[2],a[3],a[4],a[5],x0)
+        Deriv::Deriv(eta,bStr[n]),
+        bStr[n])(x,b[1],b[2],b[3],b[4],b[5],x0)
     )
   }
 
@@ -273,8 +273,8 @@ hesiler <- function(a, x, x0 = 0) {
   for(n1 in 1:4) {
     for(n2 in (n1+1):5) {
       H[n1,n2] <- sum(
-        Deriv::Deriv(Deriv::Deriv(eta,aStr[n1]),aStr[n2])
-         (x,a[1],a[2],a[3],a[4],a[5],x0)
+        Deriv::Deriv(Deriv::Deriv(eta,bStr[n1]),bStr[n2])
+         (x,b[1],b[2],b[3],b[4],b[5],x0)
       )
       H[n2,n1] <- H[n1,n2]
     }
@@ -293,15 +293,16 @@ hesiler <- function(a, x, x0 = 0) {
 #'
 #' @param x Locations at which to evaluate probability density function
 #' @param x0 The conditional starting age. The default is 0 (no offset).
-#' @param alpha Initial value for optimization. Default from Gage and Dyke 1986,
+#' @param b0 Initial value for optimization. Default from Gage and Dyke 1986,
 #'   Table 2, Level 15. This is also used for the baseline age in the
 #'   tranformed negative log-likelihood calculation.
 #' @param calc_hessian Whether to calculate the Hessian (default FALSE)
-#' @param temper Whether to use parallel tempering for the optimization (as
-#'   opposed to base R's optim; default FALSE)
+#' @param tol The tolerance for the hjk optimization (default: 1e-10)
+#' @param info Whether to print out optimization information for the hjk
+#'   optimization (default: FALSE)
 #'
-#' @return A list consisting of the fit (on the transformed variable abar) and
-#'   maximum likelihood estimate of a. Optionally, the Hessian of the
+#' @return A list consisting of the fit (on the transformed variable bbar) and
+#'   maximum likelihood estimate of b. Optionally, the Hessian of the
 #'   log-likelihood is returned, which allows estimation of the standard errors
 #'   of the maximum likelihood estimate via the observed Fisher information
 #'   matrix.
@@ -309,31 +310,50 @@ hesiler <- function(a, x, x0 = 0) {
 #' @export
 fit_siler <- function(x,
                       x0 = 0,
-                      alpha = c(.175, 1.40, .368 * .01, .075 * .001, .917 * .1),
-                      xmax = 120,
-                      calc_hessian = FALSE) {
-  beta <- alpha
-  beta[4] <- alpha[4] * exp(alpha[5] * xmax)
+                      b0 = c(.175,
+                             1.40,
+                             .368 * .01,
+                             log(.917 * .1/(.075 * .001))/(.917 * .1),
+                             .917 * .1),
+                      calc_hessian = FALSE,
+                      tol=1e-10,
+                      info=FALSE) {
+  # The traditional parameterization of the Siler hazard is
+  # a1 * exp(-a2*x) + a3 + a4*exp(-a5*x)
+  # The demohaz parameterization is related to this one per
+  # b1 = a1
+  # b2 = a2
+  # b3 = a3
+  # b4 = log(a5/a4)/a5
+  # b5 = a5
+  # The Gage and Dyke vector in this traditional parameterization is
+  # a0 = c(.175, 1.40, .368 * .01, .075 * .001, .917 * .1)
+  # Hence, the default intial value for the demohaz parameterization is:
+  # b0 = c(.175, 1.40, .368 * .01, log(.917 * .1/(.075 * .001))/(.917 * .1), .917 * .1)
 
   xtable <- table(x)
   xvalues <- as.numeric(names(xtable))
   xcounts <- as.numeric(xtable)
 
+  # fast_transformed_nllsiler gives the negative log-likelihood for the
+  # parameterization exp(bbar) = 
   fit <- temper_and_tune(fast_transformed_nllsiler,
-                         rep(0,5),
-                         xvalues=xvalues,
-                         xcounts=xcounts,
-                         beta=beta,
-                         x0=x0,
-                         xmax=xmax)
-  b <- beta * exp(fit$th)
-  a <- b
-  a[4] <- b[4] / exp(b[5]*xmax)
+                         rep(0, 5),
+                         tol=tol,
+                         info=info,
+                         xvalues = xvalues,
+                         xcounts = xcounts,
+                         b0 = b0,
+                         x0 = x0)
+  
+  print('Gradient:')
+  print(gradsiler_fast(fit$th, x, b0))
+  b <- b0 * exp(fit$th)
   if (calc_hessian) {
-    H <- hesiler(a,x,x0)
-    return(list(a=a, fit=fit, hessian=H))
+    H <- hesiler(b,x,x0)
+    return(list(b=b, fit=fit, hessian=H))
   } else {
-    return(list(a=a, fit=fit))
+    return(list(b=b, fit=fit))
   }
 }
 
@@ -352,46 +372,31 @@ fit_siler <- function(x,
 #' xvalues <- as.numeric(names(xtable))
 #' xcounts <- as.numeric(xtable)
 #'
-#' To improve the robustness of the negative log-likelihood fit, a transformed
-#' vector is used for the actual optimization and the fourth parameter is
-#' adjusted so that it is measured with respect to a notional maximum age,
-#' xmax. To make this precise, define the vector b to be:
+#' The Siler hazard is:
 #'
-#' b1 = a1
-#' b2 = a2
-#' b3 = a3
-#' b4 = a4 * exp(a5 * xmax)
-#' b5 = a5
+#' lambda(x) = b1 * exp(-b_2*x) + b_3 + b5 * exp(b5*(x-b4))
 #'
-#' The Siler hazard given these definitions is:
+#' Let b0 be a baseline parameter vector and define the transformed parameter
+#' vector bbar to be (the notation is modified slightly from, e.g., b1 to b_1
+#' to accommodate the initial parameter vector being b0)
 #'
-#' lambda(x) = b1 * exp(-b_2*x) + b_3 + b4 * exp(b5*(x-xmax))
-#'
-#' In addition, let beta be a baseline parameter vector and define the
-#' transformed parameter vector bbar to be
-#'
-#' b1 = beta1 * exp(bbar1)
-#' b2 = beta2 * exp(bbar2)
-#' b3 = beta3 * exp(bbar3)
-#' b4 = beta4 * exp(bbar4)
-#' b5 = beta5 * exp(bbar5)
+#' b_1 = b0_1 * exp(bbar1)
+#' b_2 = b0_2 * exp(bbar2)
+#' b_3 = b0_3 * exp(bbar3)
+#' b_4 = b0_4 * exp(bbar4)
+#' b_5 = b0_5 * exp(bbar5)
 #'
 #' This second transformation allows the parameter vector bbar to be
 #' unconstrained (positive or negative) while the parameter vector b is
 #' positive (assuming that the baseline vector beta is positive, which should
-#' be ensured in its construction). In principle, the choices of beta and xmax
-#' are arbitrary as far as the maximum likelihood optimization is concerned.
-#' However, appropriate choices can make the fitting far more robust. If
-#' fitting human demographic data, we suggest that xmax = 120 (years) and
-#' derive beta from beta from Gage and Dyke 1986, Table 2, Level 15.
+#' be ensured in its construction).
 #'
 #' @param bbar The transformed parameter vector, used to increase robustness of
 #'   fitting
 #' @param xvalues Locations at which to evaluate probability density function
 #' @param xcounts The number of observations for each entry in xvalues
-#' @param beta The baseline parameter vector
+#' @param b0 The baseline parameter vector
 #' @param x0 The conditional starting age [default: 0].
-#' @param xmax The baseline maximum age (default: 120)
 #'
 #' @return The negative log-likelihood
 #'
@@ -399,13 +404,111 @@ fit_siler <- function(x,
 fast_transformed_nllsiler <- function(bbar,
                                       xvalues,
                                       xcounts,
-                                      beta,
-                                      x0=0,
-                                      xmax=120) {
-  b <- beta * exp(bbar)
+                                      b0,
+                                      x0=0) {
+  b <- b0 * exp(bbar)
   x <- xvalues
-  haz <- b[1] * exp(-b[2]*x) + b[3] + (b[4]/exp(b[5]*xmax))*exp(b[5]*x)
-  cumhaz <- (b[1]/b[2])*(-exp(-b[2]*x)+exp(-b[2]*x0)) + b[3]*(x-x0) +
-     (b[4]/exp(b[5]*xmax)/b[5])*(exp(b[5]*x)-exp(b[5]*x0))
-  return(sum(xcounts*(-log(haz) + cumhaz)))
+  haz <- b[1] * exp(-b[2]*x) + b[3] + b[5]*exp(b[5]*(x-b[4]))
+  cumhaz <- (-b[1] / b[2]) * (exp(-b[2] * x) - exp(-b[2]*x0)) +
+            b[3] * (x-x0) +
+            exp(b[5] * (x - b[4])) - exp(b[5] * (x0 - b[4]))
+
+  eta <- sum(xcounts*(-log(haz) + cumhaz))
+  if (is.na(eta)) {
+    eta <- Inf # Use infinity since this allows the hjk algorithm to handle it
+  }
+  return(eta)
+}
+
+#' @export
+fast_transformed_gradsiler <- function(bbar,
+                                       xvalues,
+                                       xcounts,
+                                       b0,
+                                       x0=0) {
+  b <- b0 * exp(bbar)
+  x <- c()
+  for (n in 1:length(xvalues)) {
+    x <- c(x, rep(xvalues[n], xcounts[n]))
+  }
+
+  return(gradsiler_fast(bbar, x, b0, x0))
+}
+
+#' @export
+gradsiler_fast <- function(bbar, x, b0, x0 = 0) {
+  b <- b0 * exp(bbar)
+  bStr <- c('b1', 'b2', 'b3', 'b4', 'b5')
+
+  G <- numeric(length = 5) # Initialize the gradient vector
+
+  # eta is the log-likelihood
+  eta_fast <- function(x,b1,b2,b3,b4,b5,x0) {
+    log(b1*exp(-b2*x)+b3+b5*exp(b5*(x-b4)))
+    - b1*(exp(-b2*x)-exp(-b2*x0))/b2
+    + b3*(x-x0)
+    + exp(b5*(x-b4))-exp(b5*(x0-b4))
+  }
+
+  # Analytically calculate gradient components
+  for (n in 1:5) {
+    G[n] <- sum(
+      Deriv::Deriv(eta_fast, bStr[n])(x, b[1], b[2], b[3], b[4], b[5], x0)
+    )
+  }
+
+  return(G)
+}
+
+#' @export
+gradsiler_fast2 <- function(b, x, x0 = 0) {
+  bStr <- c('b1', 'b2', 'b3', 'b4', 'b5')
+
+  G <- numeric(length = 5) # Initialize the gradient vector
+
+  # eta is the log-likelihood
+  eta_fast <- function(x, b1, b2, b3, b4, b5, x0) {
+    log(b1*exp(-b2*x) + b3 + b5*exp(b5*(x-b4)))
+    - b1*(exp(-b2*x) - exp(-b2*x0))/b2
+    + b3*(x-x0)
+    + exp(b5*(x-b4)) - exp(b5*(x0-b4))
+  }
+
+  # Analytically calculate gradient components
+  for (n in 1:5) {
+    G[n] <- sum(
+      Deriv::Deriv(eta_fast, bStr[n])(x, b[1], b[2], b[3], b[4], b[5], x0)
+    )
+  }
+
+  return(G)
+}
+
+#' @export
+gradient_descent <- function(par, fn, gr, lr, maxiter, grad_tol, ...) {
+  # Control list handling
+
+  x <- par
+  fx <- fn(x, ...)
+
+  for (iter in 1:maxiter) {
+    grad <- gr(x, ...)
+
+    # Check the gradient norm
+    if (all(abs(grad) < grad_tol)) break
+
+    x_new <- x - lr * grad
+    fx_new <- fn(x_new, ...)
+
+    # Check the change in the objective function value
+    #if (abs(fx_new - fx) < tol) break
+
+    x <- x_new
+    fx <- fx_new
+    print(iter)
+    print(fx)
+    print(grad)
+  }
+
+  return(list(par = x, value = fx, feval = iter))
 }

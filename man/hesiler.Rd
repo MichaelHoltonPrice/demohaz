@@ -4,10 +4,10 @@
 \alias{hesiler}
 \title{Calculate the Hessian for the Siler distribution}
 \usage{
-hesiler(a, x, x0 = 0)
+hesiler(b, x, x0 = 0)
 }
 \arguments{
-\item{a}{The parameter vector}
+\item{b}{The parameter vector}
 
 \item{x}{The vector of ages}
 
@@ -17,7 +17,7 @@ hesiler(a, x, x0 = 0)
 The Hessian matrix (5 by 5)
 }
 \description{
-Given the parameter vector a and the vector of ages x, calculate the Hessian
+Given the parameter vector b and the vector of ages x, calculate the Hessian
 for a negative log-likelihood fit.
 
 See details in the documentation for hsiler for a definition of the Siler

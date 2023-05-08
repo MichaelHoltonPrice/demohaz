@@ -4,12 +4,12 @@
 \alias{rsiler}
 \title{Make random samples from the Siler distribution}
 \usage{
-rsiler(N, a, x0 = 0)
+rsiler(N, b, x0 = 0)
 }
 \arguments{
 \item{N}{The number of samples to make}
 
-\item{a}{The parameter vector}
+\item{b}{The parameter vector}
 
 \item{x0}{The conditional starting age [default: 0].}
 }
@@ -18,7 +18,7 @@ A vector of N random samples
 }
 \description{
 Make N random samples from the Siler distribution given the input parameter
-vector a and a conditional starting age x0.
+vector b and a conditional starting age x0.
 
 See details in the documentation for hsiler for a definition of the Siler
 hazard and related quantities.

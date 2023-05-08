@@ -4,10 +4,10 @@
 \alias{nllsiler}
 \title{Calculate the negative log-likelihood for the Siler distribution}
 \usage{
-nllsiler(a, x, x0 = 0)
+nllsiler(b, x, x0 = 0)
 }
 \arguments{
-\item{a}{The parameter vector}
+\item{b}{The parameter vector}
 
 \item{x}{The vector of ages}
 
@@ -17,7 +17,7 @@ nllsiler(a, x, x0 = 0)
 The negative log-likelihood (a scalar, not a vector)
 }
 \description{
-Given the parameter vector a and the vector of ages x, calculate the Siler
+Given the parameter vector b and the vector of ages x, calculate the Siler
 negative log-likelihood.
 
 See details in the documentation for hsiler for a definition of the Siler

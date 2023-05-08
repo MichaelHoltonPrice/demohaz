@@ -4,12 +4,12 @@
 \alias{qsiler}
 \title{Calculate the the inverse of the cumulative distribution function (CDF)}
 \usage{
-qsiler(qvect, a, x0 = 0)
+qsiler(qvect, b, x0 = 0)
 }
 \arguments{
 \item{qvect}{The vector of quantiles}
 
-\item{a}{The parameter vector}
+\item{b}{The parameter vector}
 
 \item{x0}{The conditional starting age [default: 0].}
 }
@@ -21,14 +21,14 @@ Calculate x given the input quantiles qvect. That is, solve the inverse
 problem for the cumulative distribution. This is accomplished using the
 following change of variables:
 
-xbar = a5*(x - x0) / (a5*x + 1)
+xbar = b5*(x - x0) / (b5*x + 1)
 
 or, equivalently,
 
-x = ((xbar/a5) + x0)/(1-xbar).
+x = ((xbar/b5) + x0)/(1-xbar).
 
 xbar lies between 0 to 1, which allows R's root-finder to be invoked on a
-bounded interval. Normalizing by a5 regularizes the root finding for large
+bounded interval. Normalizing by b5 regularizes the root finding for large
 ages where the positive exponential term dominates the hazard.
 
 See details in the documentation for hsiler for a definition of the Siler

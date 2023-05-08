@@ -5,7 +5,7 @@
 \title{Calculate the negative log-likelihood for the Siler distribution using counts
 (hence fast) and assuming a transformed parameter vector.}
 \usage{
-fast_transformed_nllsiler(bbar, xvalues, xcounts, beta, x0 = 0, xmax = 120)
+fast_transformed_nllsiler(bbar, xvalues, xcounts, b0, x0 = 0)
 }
 \arguments{
 \item{bbar}{The transformed parameter vector, used to increase robustness of
@@ -15,11 +15,9 @@ fitting}
 
 \item{xcounts}{The number of observations for each entry in xvalues}
 
-\item{beta}{The baseline parameter vector}
+\item{b0}{The baseline parameter vector}
 
 \item{x0}{The conditional starting age [default: 0].}
-
-\item{xmax}{The baseline maximum age (default: 120)}
 }
 \value{
 The negative log-likelihood
@@ -35,36 +33,22 @@ xtable <- table(x)
 xvalues <- as.numeric(names(xtable))
 xcounts <- as.numeric(xtable)
 
-To improve the robustness of the negative log-likelihood fit, a transformed
-vector is used for the actual optimization and the fourth parameter is
-adjusted so that it is measured with respect to a notional maximum age,
-xmax. To make this precise, define the vector b to be:
+The Siler hazard is:
 
-b1 = a1
-b2 = a2
-b3 = a3
-b4 = a4 * exp(a5 * xmax)
-b5 = a5
+lambda(x) = b1 * exp(-b_2*x) + b_3 + b5 * exp(b5*(x-b4))
 
-The Siler hazard given these definitions is:
+Let b0 be a baseline parameter vector and define the transformed parameter
+vector bbar to be (the notation is modified slightly from, e.g., b1 to b_1
+to accommodate the initial parameter vector being b0)
 
-lambda(x) = b1 * exp(-b_2*x) + b_3 + b4 * exp(b5*(x-xmax))
-
-In addition, let beta be a baseline parameter vector and define the
-transformed parameter vector bbar to be
-
-b1 = beta1 * exp(bbar1)
-b2 = beta2 * exp(bbar2)
-b3 = beta3 * exp(bbar3)
-b4 = beta4 * exp(bbar4)
-b5 = beta5 * exp(bbar5)
+b_1 = b0_1 * exp(bbar1)
+b_2 = b0_2 * exp(bbar2)
+b_3 = b0_3 * exp(bbar3)
+b_4 = b0_4 * exp(bbar4)
+b_5 = b0_5 * exp(bbar5)
 
 This second transformation allows the parameter vector bbar to be
 unconstrained (positive or negative) while the parameter vector b is
 positive (assuming that the baseline vector beta is positive, which should
-be ensured in its construction). In principle, the choices of beta and xmax
-are arbitrary as far as the maximum likelihood optimization is concerned.
-However, appropriate choices can make the fitting far more robust. If
-fitting human demographic data, we suggest that xmax = 120 (years) and
-derive beta from beta from Gage and Dyke 1986, Table 2, Level 15.
+be ensured in its construction).
 }

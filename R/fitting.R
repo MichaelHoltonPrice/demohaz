@@ -21,6 +21,9 @@
 #' @param prop_scale_mat Proposal scale matrix for the tempering (default:
 #'   ranges evenly from 0.1 for the hottest temperature to 0.001 for the
 #'   coldest temperature, for all parameter values at each temperature).
+#' @param tol The tolerance for the hjk optimization (default: 1e-10)
+#' @param info Whether to print out optimization information for the hjk
+#'   optimization (default: FALSE)
 #' @param ... Additional inputs to the objective function
 #'
 #' @return The best fit parameter vector
@@ -32,6 +35,8 @@ temper_and_tune <- function(obj_fun,
                             samps_per_cyc=20,
                             temp_vect = 10^(rev(seq(-1,1,by=.25))),
                             prop_scale_mat = NULL,
+                            tol=1e-10,
+                            info=FALSE,
                             ...) {
   num_param <- length(th0)
 
@@ -52,17 +57,40 @@ temper_and_tune <- function(obj_fun,
   n <- which.min(unlist(lapply(temper$chains,function(x){x$eta_best})))
   th_temper <- temper$chains[[n]]$theta_best
 
+  print('Temper best:')
+  print(th_temper)
+  print(temper$chains[[n]]$eta_best)
+
   # Refine the solution using hjk
   hjk_output <- dfoptim::hjk(th_temper,
                              obj_fun,
+                             control=list(tol=tol,info=info),
                              ...)
 
-  th <- hjk_output$par
+  th_hjk <- hjk_output$par
 
+  print('hjk best:')
+  print(th_hjk)
+  print(hjk_output$value)
+
+
+  result <- gradient_descent(th_hjk,
+                             obj_fun,
+                             fast_transformed_gradsiler,
+                             1e-4,
+                             10000,
+                             1e-1,
+                             ...)
+
+  th <- result$par
+  print('Gradient descent best')
+  print(th)
+  print(result$value)
   return(list(obj_fun=obj_fun,
               th0=th0,
               temper=temper,
               th_temper=th_temper,
               hjk_output=hjk_output,
+              th_hjk=th_hjk,
               th=th))
 }

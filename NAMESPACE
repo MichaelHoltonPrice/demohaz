@@ -2,8 +2,12 @@
 
 export(chsiler)
 export(dsiler)
+export(fast_transformed_gradsiler)
 export(fast_transformed_nllsiler)
 export(fit_siler)
+export(gradient_descent)
+export(gradsiler_fast)
+export(gradsiler_fast2)
 export(hesiler)
 export(hsiler)
 export(load_demohaz_data)

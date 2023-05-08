@@ -4,12 +4,12 @@
 \alias{psiler}
 \title{Calculate the Siler cumulative distribution function (CDF) value}
 \usage{
-psiler(x, a, x0 = 0)
+psiler(x, b, x0 = 0)
 }
 \arguments{
 \item{x}{The vector of ages}
 
-\item{a}{The parameter vector}
+\item{b}{The parameter vector}
 
 \item{x0}{The conditional starting age [default: 0].}
 }
@@ -19,7 +19,7 @@ the input vector x
 }
 \description{
 Calculate the Siler cumulative distribuition function (CDF) at the locations
-in the input vector x given the parameter vector a. Optionally, a
+in the input vector x given the parameter vector b. Optionally, a
 conditional starting age can be input. See details in the documentation for
 hsiler for a definition of the Siler hazard and related quantities,
 including the CDF.

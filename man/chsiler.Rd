@@ -4,12 +4,12 @@
 \alias{chsiler}
 \title{Calculate the Siler cumulative hazard}
 \usage{
-chsiler(x, a, x0 = 0)
+chsiler(x, b, x0 = 0)
 }
 \arguments{
 \item{x}{The vector of ages}
 
-\item{a}{The parameter vector}
+\item{b}{The parameter vector}
 
 \item{x0}{The conditional starting age [default: 0].}
 
@@ -23,7 +23,7 @@ The cumulative hazard evaluated at the locations in the input vector
 }
 \description{
 Calculate the Siler cumulative hazard at the locations in the input vector x
-given the parameter vector a. Optionally, a conditional starting age can be
+given the parameter vector b. Optionally, a conditional starting age can be
 input. See details in the documentation for hsiler for a definition of the
 Siler hazard and related quantities, including the cumulative hazard.
 }
