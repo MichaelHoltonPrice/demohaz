@@ -15,15 +15,16 @@
 #' @param obj_fun The objective function to minimize
 #' @param th0 The starting point for minimization
 #' @param num_cyc Number of cycles for the tempering (default: 100)
-#' @param samps_per_cyc Samples percycle for the tempering (default: 20)
+#' @param samps_per_cyc Samples per cycle for the tempering (default: 20)
 #' @param temp_vect Temperature vector for the tempering (default:
 #'   10^(rev(seq(-1,1,by=.25)))
 #' @param prop_scale_mat Proposal scale matrix for the tempering (default:
 #'   ranges evenly from 0.1 for the hottest temperature to 0.001 for the
 #'   coldest temperature, for all parameter values at each temperature).
-#' @param tol The tolerance for the hjk optimization (default: 1e-10)
-#' @param info Whether to print out optimization information for the hjk
-#'   optimization (default: FALSE)
+#' @param verbose Whether to print out optimization information
+#'   (default: FALSE)
+#' @param lr The learning rate to use for fine tuning using gradient descent
+#'   (default: 1e-5)
 #' @param ... Additional inputs to the objective function
 #'
 #' @return The best fit parameter vector
@@ -35,17 +36,28 @@ temper_and_tune <- function(obj_fun,
                             samps_per_cyc=20,
                             temp_vect = 10^(rev(seq(-1,1,by=.25))),
                             prop_scale_mat = NULL,
-                            tol=1e-10,
-                            info=FALSE,
+                            verbose=FALSE,
+                            lr=1e-5,
                             ...) {
   num_param <- length(th0)
 
   # For the scale of the proposal distribution, use 0.1 for the highest
-  # temperature and 0.001 for the coldest temperature.
+  # temperature and 0.001 for the coldest temperature. This is multiplied by
+  # each parameter value in b0 since they have different scales.
   if (is.null(prop_scale_mat)) {
-    prop_scale_mat <- t(replicate(num_param,
+    just_scale <- t(replicate(num_param,
                                   rev(seq(0.001,.1,len=length(temp_vect)))))
+    just_param <- replicate(length(temp_vect),th0)
+    prop_scale_mat <- just_scale * just_param
   }
+  if(verbose) {
+    print('Starting parameter vector th0 = ')
+    print(th0)
+    print('Starting objective function value eta = ')
+    print(obj_fun(th0, ...))
+  }
+  # TODO: add verbosity to par_temper
+  # TODO: support plotting in par_temper
   temper <- enneal::par_temper(th0,
                                obj_fun,
                                temp_vect=temp_vect,
@@ -57,40 +69,36 @@ temper_and_tune <- function(obj_fun,
   n <- which.min(unlist(lapply(temper$chains,function(x){x$eta_best})))
   th_temper <- temper$chains[[n]]$theta_best
 
-  print('Temper best:')
-  print(th_temper)
-  print(temper$chains[[n]]$eta_best)
+  if(verbose) {
+    print('Best parameter vector from initial tempering:')
+    print(th_temper)
+    print('The corresponding best value of the objective function:')
+    print(temper$chains[[n]]$eta_best)
+  }
 
-  # Refine the solution using hjk
-  hjk_output <- dfoptim::hjk(th_temper,
+ # TODO: support plotting in gradient_descent
+ descent <- gradient_descent(th_temper,
                              obj_fun,
-                             control=list(tol=tol,info=info),
-                             ...)
-
-  th_hjk <- hjk_output$par
-
-  print('hjk best:')
-  print(th_hjk)
-  print(hjk_output$value)
-
-
-  result <- gradient_descent(th_hjk,
-                             obj_fun,
-                             fast_transformed_gradsiler,
-                             1e-4,
-                             10000,
+                             fast_gradnllsiler,
+                             lr=lr,
+                             100,
                              1e-1,
+                             rescale=TRUE,
+                             verbose=verbose,
                              ...)
 
-  th <- result$par
-  print('Gradient descent best')
-  print(th)
-  print(result$value)
+  # Undo the scaling and, if necessary, print the result
+  th <- descent$par*th_temper
+  if(verbose) {
+    print('Gradient descent best')
+    print(th)
+    print(descent$value)
+  }
+
   return(list(obj_fun=obj_fun,
               th0=th0,
               temper=temper,
               th_temper=th_temper,
-              hjk_output=hjk_output,
-              th_hjk=th_hjk,
+              descent=descent,
               th=th))
 }

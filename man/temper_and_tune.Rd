@@ -12,8 +12,8 @@ temper_and_tune(
   samps_per_cyc = 20,
   temp_vect = 10^(rev(seq(-1, 1, by = 0.25))),
   prop_scale_mat = NULL,
-  tol = 1e-10,
-  info = FALSE,
+  verbose = FALSE,
+  lr = 1e-05,
   ...
 )
 }
@@ -24,7 +24,7 @@ temper_and_tune(
 
 \item{num_cyc}{Number of cycles for the tempering (default: 100)}
 
-\item{samps_per_cyc}{Samples percycle for the tempering (default: 20)}
+\item{samps_per_cyc}{Samples per cycle for the tempering (default: 20)}
 
 \item{temp_vect}{Temperature vector for the tempering (default:
 10^(rev(seq(-1,1,by=.25)))}
@@ -33,10 +33,11 @@ temper_and_tune(
 ranges evenly from 0.1 for the hottest temperature to 0.001 for the
 coldest temperature, for all parameter values at each temperature).}
 
-\item{tol}{The tolerance for the hjk optimization (default: 1e-10)}
+\item{verbose}{Whether to print out optimization information
+(default: FALSE)}
 
-\item{info}{Whether to print out optimization information for the hjk
-optimization (default: FALSE)}
+\item{lr}{The learning rate to use for fine tuning using gradient descent
+(default: 1e-5)}
 
 \item{...}{Additional inputs to the objective function}
 }

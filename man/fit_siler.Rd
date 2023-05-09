@@ -10,8 +10,8 @@ fit_siler(
   b0 = c(0.175, 1.4, 0.368 * 0.01, log(0.917 * 0.1/(0.075 * 0.001))/(0.917 * 0.1), 0.917
     * 0.1),
   calc_hessian = FALSE,
-  tol = 1e-10,
-  info = FALSE
+  lr = 1e-05,
+  verbose = FALSE
 )
 }
 \arguments{
@@ -25,10 +25,11 @@ tranformed negative log-likelihood calculation.}
 
 \item{calc_hessian}{Whether to calculate the Hessian (default FALSE)}
 
-\item{tol}{The tolerance for the hjk optimization (default: 1e-10)}
+\item{lr}{The learning rate to use for fine tuning using gradient descent
+(default: 1e-5)}
 
-\item{info}{Whether to print out optimization information for the hjk
-optimization (default: FALSE)}
+\item{verbose}{Whether to print out optimization information
+(default: FALSE)}
 }
 \value{
 A list consisting of the fit (on the transformed variable bbar) and

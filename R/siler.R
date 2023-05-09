@@ -46,6 +46,9 @@
 #'
 #' @export
 hsiler <- function(x, b) {
+  if (any(b < 0)) {
+    stop('No element of b can be negative')
+  }
   return(b[1] * exp(-b[2] * x) + b[3] + b[5] * exp(b[5] * (x - b[4])))
 }
 
@@ -70,6 +73,8 @@ hsiler <- function(x, b) {
 #'
 #' @export
 chsiler <- function(x, b, x0 = 0) {
+  check_siler_inputs(b, x0)
+
   if (x0 == 0) {
     return(-b[1] / b[2] * (exp(-b[2] * x) - 1) +
              b[3] * x + exp(b[5] * (x - b[4])) - exp(-b[5]*b[4]))
@@ -96,6 +101,7 @@ chsiler <- function(x, b, x0 = 0) {
 #'
 #' @export
 ssiler <- function(x, b, x0 = 0) {
+  check_siler_inputs(b, x0)
   return(exp(-chsiler(x, b, x0)))
 }
 
@@ -117,6 +123,7 @@ ssiler <- function(x, b, x0 = 0) {
 #'
 #' @export
 dsiler <- function(x, b, x0 = 0) {
+  check_siler_inputs(b, x0)
   return(hsiler(x, b) * ssiler(x, b, x0))
 }
 
@@ -139,6 +146,7 @@ dsiler <- function(x, b, x0 = 0) {
 #'
 #' @export
 psiler <- function(x, b, x0 = 0) {
+  check_siler_inputs(b, x0)
   return(1 - ssiler(x, b, x0))
 }
 
@@ -172,6 +180,12 @@ psiler <- function(x, b, x0 = 0) {
 #' @export
 qsiler <- function(qvect, b, x0 = 0) {
   # TODO: consider returning Inf if the quantile is 1.
+  check_siler_inputs(b, x0)
+
+  if (any(qvect < 0) | any(qvect > 1)) {
+      stop("Quantiles should be between 0 and 1")
+  }
+
   N <- length(qvect)
   xvect <- rep(NA, N)
   for (n in 1:N) {
@@ -203,30 +217,9 @@ qsiler <- function(qvect, b, x0 = 0) {
 #'
 #' @export
 rsiler <- function(N, b, x0 = 0) {
+  check_siler_inputs(b, x0)
   cdf <- runif(N)
   return(qsiler(cdf, b, x0))
-}
-
-#' @title
-#' Calculate the negative log-likelihood for the Siler distribution
-#'
-#' @description
-#' Given the parameter vector b and the vector of ages x, calculate the Siler
-#' negative log-likelihood.
-#'
-#' See details in the documentation for hsiler for a definition of the Siler
-#' hazard and related quantities, including the negative log-likelihood.
-#'
-#' @param b	The parameter vector
-#' @param x The vector of ages
-#' @param x0 The conditional starting age [default: 0].
-#'
-#' @return The negative log-likelihood (a scalar, not a vector)
-#'
-#' @export
-nllsiler <- function(b, x, x0 = 0) {
-  # b is the first input as expected by most R optimization routines
-  return(-sum(log(dsiler(x, b, x0))))
 }
 
 #' @title
@@ -247,17 +240,15 @@ nllsiler <- function(b, x, x0 = 0) {
 #'
 #' @export
 hesiler <- function(b, x, x0 = 0) {
-  # a is the first input as expected by most R optimization routines
+  # b is the first input as expected by most R optimization routines
+  check_siler_inputs(b, x0)
   bStr <- c('b1','b2','b3','b4','b5')
 
   H <- matrix(NA,5,5) # Initialize the matrix
 
   # eta is the log-likelihood
   eta <- function(x,b1,b2,b3,b4,b5,x0) {
-    log(b1*exp(-b2*x)+b3+b5*exp(b5*(x-b4)))
-    - b1*(exp(-b2*x)-exp(-b2*x0))/b2
-    + b3*(x-x0)
-    + exp(b5*(x-b4))-exp(b5*(x0-b4))
+    -log(b1*exp(-b2*x)+b3+b5*exp(b5*(x-b4))) - b1*(exp(-b2*x)-exp(-b2*x0))/b2 + b3*(x-x0) + exp(b5*(x-b4))-exp(b5*(x0-b4))
   }
 
   # Analytically calculate Hessian diagonals
@@ -283,6 +274,45 @@ hesiler <- function(b, x, x0 = 0) {
 }
 
 #' @title
+#' Calculate the gradient for the Siler distribution
+#'
+#' @description
+#' Given the parameter vector b and the vector of ages x, calculate the gradient
+#' for a negative log-likelihood fit. Do this symbolically using the Deriv
+#' package.
+#'
+#' See details in the documentation for hsiler for a definition of the Siler
+#' hazard and related quantities.
+#'
+#' @param b The parameter vector
+#' @param x The vector of ages
+#' @param x0 The conditional starting age [default: 0].
+#'
+#' @return The gradient vector (length 5)
+#'
+#' @export
+gradnllsiler <- function(b, x, x0 = 0) {
+  check_siler_inputs(b, x0)
+  bStr <- c('b1','b2','b3','b4','b5')
+  bStr <- c('b1', 'b2', 'b3', 'b4', 'b5')
+
+  # eta is the log-likelihood
+  eta <- function(x,b1,b2,b3,b4,b5,x0) {
+    -log(b1*exp(-b2*x)+b3+b5*exp(b5*(x-b4))) - (b1/b2)*(exp(-b2*x)-exp(-b2*x0)) + b3*(x-x0) + exp(b5*(x-b4))-exp(b5*(x0-b4))
+  }
+
+  # Initialize the gradient vector
+  grad <- numeric(length = 5)
+
+  # Analytically calculate the gradient components
+  for (n in 1:5) {
+    grad[n] <- sum(Deriv::Deriv(eta, bStr[n])(x, b[1], b[2], b[3], b[4], b[5], x0))
+  }
+
+  return(grad)
+}
+
+#' @title
 #' Maximum likelihood fit for the Siler distribution
 #'
 #' @description
@@ -297,9 +327,10 @@ hesiler <- function(b, x, x0 = 0) {
 #'   Table 2, Level 15. This is also used for the baseline age in the
 #'   tranformed negative log-likelihood calculation.
 #' @param calc_hessian Whether to calculate the Hessian (default FALSE)
-#' @param tol The tolerance for the hjk optimization (default: 1e-10)
-#' @param info Whether to print out optimization information for the hjk
-#'   optimization (default: FALSE)
+#' @param lr The learning rate to use for fine tuning using gradient descent
+#'   (default: 1e-5)
+#' @param verbose Whether to print out optimization information
+#'   (default: FALSE)
 #'
 #' @return A list consisting of the fit (on the transformed variable bbar) and
 #'   maximum likelihood estimate of b. Optionally, the Hessian of the
@@ -316,8 +347,8 @@ fit_siler <- function(x,
                              log(.917 * .1/(.075 * .001))/(.917 * .1),
                              .917 * .1),
                       calc_hessian = FALSE,
-                      tol=1e-10,
-                      info=FALSE) {
+                      lr=1e-5,
+                      verbose=FALSE) {
   # The traditional parameterization of the Siler hazard is
   # a1 * exp(-a2*x) + a3 + a4*exp(-a5*x)
   # The demohaz parameterization is related to this one per
@@ -330,6 +361,8 @@ fit_siler <- function(x,
   # a0 = c(.175, 1.40, .368 * .01, .075 * .001, .917 * .1)
   # Hence, the default intial value for the demohaz parameterization is:
   # b0 = c(.175, 1.40, .368 * .01, log(.917 * .1/(.075 * .001))/(.917 * .1), .917 * .1)
+  check_siler_inputs(b0, x0)
+  bStr <- c('b1','b2','b3','b4','b5')
 
   xtable <- table(x)
   xvalues <- as.numeric(names(xtable))
@@ -337,18 +370,17 @@ fit_siler <- function(x,
 
   # fast_transformed_nllsiler gives the negative log-likelihood for the
   # parameterization exp(bbar) = 
-  fit <- temper_and_tune(fast_transformed_nllsiler,
-                         rep(0, 5),
-                         tol=tol,
-                         info=info,
+  fit <- temper_and_tune(fast_nllsiler,
+                         b0,
+                         verbose=verbose,
                          xvalues = xvalues,
                          xcounts = xcounts,
-                         b0 = b0,
+                         lr=lr,
+                         num_cyc=1000,
+                         samps_per_cyc=20,
                          x0 = x0)
   
-  print('Gradient:')
-  print(gradsiler_fast(fit$th, x, b0))
-  b <- b0 * exp(fit$th)
+  b <- fit$th
   if (calc_hessian) {
     H <- hesiler(b,x,x0)
     return(list(b=b, fit=fit, hessian=H))
@@ -358,15 +390,15 @@ fit_siler <- function(x,
 }
 
 #' @title
-#' Calculate the negative log-likelihood for the Siler distribution using counts
-#' (hence fast) and assuming a transformed parameter vector.
+#' Use counts to quickly calculate the Siler negative log-likelihood
 #'
 #' @description
-#' The vector of ages may contain repeats. If there are many repeats, the
-#' negative log-likelihood calculation will be slow if it is repeated for each
-#' repeated value in x. To avoid this, the inputs to this function are a
-#' vector of xvalues and corresponding counts. These two vectors can be created
-#' from the vector of ages, x, using the following code:
+#' Calculate the negative log-likelihood of the Siler probability density.
+#' This can often be done much faster by tabulating repeated x-values If there
+#' are no (or few) repeats, there is little speed loss from using tabulated
+#' values. The inputs are a vector of x-values, xvalues, and corresponding
+#' counts, xcounts, both of which are pre-computed. These two vectors can be
+#' created from the vector of ages, x, using the following code:
 #'
 #' xtable <- table(x)
 #' xvalues <- as.numeric(names(xtable))
@@ -401,12 +433,14 @@ fit_siler <- function(x,
 #' @return The negative log-likelihood
 #'
 #' @export
-fast_transformed_nllsiler <- function(bbar,
+fast_nllsiler <- function(b,
                                       xvalues,
                                       xcounts,
-                                      b0,
                                       x0=0) {
-  b <- b0 * exp(bbar)
+  if (any(b < 0)) {
+    return(Inf)
+  }
+
   x <- xvalues
   haz <- b[1] * exp(-b[2]*x) + b[3] + b[5]*exp(b[5]*(x-b[4]))
   cumhaz <- (-b[1] / b[2]) * (exp(-b[2] * x) - exp(-b[2]*x0)) +
@@ -420,76 +454,171 @@ fast_transformed_nllsiler <- function(bbar,
   return(eta)
 }
 
+#' @title
+#' Vectorized calculation of the gradient of the Siler hazard, lambda
+#'
+#' @description
+#' Calculate the gradient of the Siler hazard, lambda, for each age in the
+#' input vector x. This is a vectorized calculation since no sum is done over
+#' x. Hence, the return object is a matrix with dimensions [N x 5]
+#' rather than a vector of length 5 (N = length(x)). This allows fast
+#' calculation of the gradient when there are repeated entries in x, as in
+#' gradsiler_fast.
+#'
+#' @param x Vector of ages
+#' @param b Siler parameter vector
+#'
+#' @return A matrix of gradients with dimensions [length(x) x 5]
+#'
 #' @export
-fast_transformed_gradsiler <- function(bbar,
-                                       xvalues,
-                                       xcounts,
-                                       b0,
-                                       x0=0) {
-  b <- b0 * exp(bbar)
-  x <- c()
-  for (n in 1:length(xvalues)) {
-    x <- c(x, rep(xvalues[n], xcounts[n]))
+grad_hsiler_vect <- function(x, b) {
+  if (any(b < 0)) {
+    stop('No element of b can be negative')
+  }
+  # Initialize a matrix with dimensions [N x 5] to hold the gradients
+  grad_matrix <- matrix(NA, length(x), 5)
+
+  # Precalculate the exponential for the first and third Siler term
+  exp1 <- exp(-b[2]*x)
+  exp3 <- exp(-b[5]*(x-b[4]))
+
+  # Calculate each gradient
+  grad_matrix[,1] <- exp1
+  grad_matrix[,2] <- -b[1]*x*exp1
+  grad_matrix[,3] <- 1
+  grad_matrix[,4] <- -b[5]^2 * exp3
+  grad_matrix[,5] <- exp3 + b[5]*(x-b[4])*exp3
+  return(grad_matrix)
+}
+
+#' @title
+#' Vectorized calculation of the Siler hazard, lambda
+#'
+#' @description
+#' Calculate the the Siler hazard, lambda, for each age in the input vector x.
+#' This is a vectorized calculation that is used by, e.g., fast_gradnllsiler.
+#' The return object is a matrix with dimensions [N x 5] rather than a vector
+#' of length N (N = length(x)). The hazard is replicated 5 times for each
+#' column to achieve these dimensions.
+#'
+#' @param x Vector of ages
+#' @param b Siler parameter vector
+#'
+#' @return A matrix of hazards with dimensions [length(x) x 5]
+#'
+#' @export
+hsiler_vect <- function(x, b) {
+  if (any(b < 0)) {
+    stop('No element of b can be negative')
+  }
+  hazard <- hsiler(x, b)
+  return(replicate(5, hazard))
+}
+
+#' @title
+#' Vectorized calculation of the gradient of the Siler cumulative hazard
+#'
+#' @description
+#' Calculate the gradient of the Siler cumulative hazard for each age in the
+#' input vector x. This is a vectorized calculation since no sum is done over
+#' x. Hence, the return object is a matrix with dimensions [N x 5] rather than
+#' a vector of length 5 (N = length(x)). This allows fast calculation of the
+#' gradient when there are repeated entries in x, as in gradsiler_fast.
+#'
+#' @param x Vector of ages
+#' @param b Siler parameter vector
+#' @param x0 The conditional starting age [default: 0].
+#'
+#' @return A matrix of gradients with dimensions [length(x) x 5]
+#'
+#' @export
+grad_chsiler_vect <- function(x, b, x0=0) {
+  if (any(b < 0)) {
+    stop('No element of b can be negative')
   }
 
-  return(gradsiler_fast(bbar, x, b0, x0))
+  # Initialize a matrix with dimensions [N x 5] to hold the gradients
+  grad_matrix <- matrix(NA, length(x), 5)
+
+  # Precalculate the exponential for the first and third Siler term
+  exp1 <- exp(-b[2]*x)
+  exp3 <- exp(b[5]*(x-b[4]))
+
+  # Calculate each gradient
+  grad_matrix[,1] <- (-1/b[2]) * (exp1 - exp(-b[2]*x0))
+  grad_matrix[,2] <- (b[1]/b[2]^2)*(exp1 - exp(-b[2]*x0)) + (b[1]/b[2])*(x*exp1 - x0*exp(-b[2]*x0))
+  grad_matrix[,3] <- x-x0
+  grad_matrix[,4] <- -b[5]*(exp3 - exp(b[5]*(x0-b[4])))
+  grad_matrix[,5] <- (x-b[4])*exp3 - (x0-b[4])*exp(b[5]*(x0-b[4]))
+  return(grad_matrix)
 }
 
 #' @export
-gradsiler_fast <- function(bbar, x, b0, x0 = 0) {
-  b <- b0 * exp(bbar)
-  bStr <- c('b1', 'b2', 'b3', 'b4', 'b5')
+fast_gradnllsiler <- function(b,
+                              xvalues,
+                              xcounts,
+                              x0=0) {
 
-  G <- numeric(length = 5) # Initialize the gradient vector
+  x <- xvalues
+  grad_matrix <- matrix(NA, length(x), 5)
 
-  # eta is the log-likelihood
-  eta_fast <- function(x,b1,b2,b3,b4,b5,x0) {
-    log(b1*exp(-b2*x)+b3+b5*exp(b5*(x-b4)))
-    - b1*(exp(-b2*x)-exp(-b2*x0))/b2
-    + b3*(x-x0)
-    + exp(b5*(x-b4))-exp(b5*(x0-b4))
-  }
+  # Precalculate the exponential for the first and third Siler term
+  exp1 <- exp(-b[2]*x)
+  exp3 <- exp(b[5]*(x-b[4]))
 
-  # Analytically calculate gradient components
-  for (n in 1:5) {
-    G[n] <- sum(
-      Deriv::Deriv(eta_fast, bStr[n])(x, b[1], b[2], b[3], b[4], b[5], x0)
-    )
-  }
+  # Directly calculate the hazard (it's faster do do it directly here since
+  # exp1 and exp3 are alread calculated)
+  lambda <- b[1]*exp1 + b[3] + b[5]*exp3
 
-  return(G)
+  grad_matrix[,1] <- -exp1 / lambda + (-1/b[2]) * (exp1 - exp(-b[2]*x0))
+  grad_matrix[,2] <- b[1]*x*exp1/lambda + (b[1]/b[2]^2)*(exp1 - exp(-b[2]*x0)) + (b[1]/b[2])*(x*exp1 - x0*exp(-b[2]*x0))
+  grad_matrix[,3] <- -1/lambda + (x-x0)
+  grad_matrix[,4] <- b[5]^2*exp3/lambda -b[5]*(exp3 - exp(b[5]*(x0-b[4])))
+  grad_matrix[,5] <- -exp3*(1+b[5]*(x-b[4]))/lambda + (x-b[4])*exp3 - (x0-b[4])*exp(b[5]*(x0-b[4]))
+
+  # Create the counts matrix by replicated across columns five times, then
+  # multiply by the counts
+  count_matrix <- replicate(5, xcounts)
+
+  return(colSums(grad_matrix * count_matrix))
 }
 
 #' @export
-gradsiler_fast2 <- function(b, x, x0 = 0) {
-  bStr <- c('b1', 'b2', 'b3', 'b4', 'b5')
-
-  G <- numeric(length = 5) # Initialize the gradient vector
-
-  # eta is the log-likelihood
-  eta_fast <- function(x, b1, b2, b3, b4, b5, x0) {
-    log(b1*exp(-b2*x) + b3 + b5*exp(b5*(x-b4)))
-    - b1*(exp(-b2*x) - exp(-b2*x0))/b2
-    + b3*(x-x0)
-    + exp(b5*(x-b4)) - exp(b5*(x0-b4))
+gradient_descent <- function(par,
+                             fn0,
+                             gr0,
+                             lr,
+                             maxiter,
+                             grad_tol,
+                             rescale=FALSE,
+                             verbose=FALSE,
+                             ...) {
+  # If is TRUE, then rescale each variable by par during the optimization,
+  # including for the gradient call. This requires scaling x and defining
+  # wrappers for fn gr.
+  # TODO: it's potentially confusing to use x for the parameter vector here
+  if (rescale) {
+    x <- rep(1,5)
+    fn <- function(x,...) {
+      return(fn0(x*par, ...))
+    }
+    gr <- function(x,...) {
+      grad <- gr0(x*par,...)
+      return(grad*par)
+    }
+  } else {
+    x <- par
+    fn <- fn0(x,...)
+    gr <- gr0(x,...)
   }
 
-  # Analytically calculate gradient components
-  for (n in 1:5) {
-    G[n] <- sum(
-      Deriv::Deriv(eta_fast, bStr[n])(x, b[1], b[2], b[3], b[4], b[5], x0)
-    )
-  }
-
-  return(G)
-}
-
-#' @export
-gradient_descent <- function(par, fn, gr, lr, maxiter, grad_tol, ...) {
-  # Control list handling
-
-  x <- par
   fx <- fn(x, ...)
+  grad <- gr(x, ...)
+  if(verbose) {
+    cat(sprintf("Iteration: %d, Objective function: %.3f, Gradient: %s\r",
+                0, fx, toString(round(grad, 3))))
+    flush.console()  # Ensure that the output is updated immediately
+  }
 
   for (iter in 1:maxiter) {
     grad <- gr(x, ...)
@@ -505,10 +634,105 @@ gradient_descent <- function(par, fn, gr, lr, maxiter, grad_tol, ...) {
 
     x <- x_new
     fx <- fx_new
-    print(iter)
-    print(fx)
-    print(grad)
+    if(verbose) {
+      cat(sprintf("Iteration: %d, Objective function: %.3f, Gradient: %s\r",
+                  iter, fx, toString(round(grad, 3))))
+      flush.console()  # Ensure that the output is updated immediately
+    }
+
+#    if(verbose) {
+#      cat('Iteration: ', iter,
+#          ', Objective function: ', fx,
+#          ', Gradient: ', toString(grad),
+#          '\r', sep = "")
+#    }
   }
 
   return(list(par = x, value = fx, feval = iter))
+}
+
+#' @title
+#' Convert from the traditional to demohaz Siler parameterization
+#'
+#' @description
+#' For the input vector a in the traditional parameterization, convert to the
+#' demohaz parameterization. The traditional parameterization of the hazard is
+#' a[1]*exp(a[2]*x) + a[3] + a[4]*exp(a[5]*x) whereas the demohaz
+#' parameterization is b[1]*exp(b[2]*x) + b[3] + b[5]*exp(b[5]*(x-b[4])). They
+#' are related via
+#'
+#' b[1] = a[1]
+#' b[2] = a[2]
+#' b[3] = a[3]
+#' b[4] = log(a[5]/a[4])/a[5]
+#' b[5] = a[5]
+#'
+#' @param a The traditional pramaterization of the Siler hazard
+#'
+#' @return The demohaz pramaterization of the Siler hazard
+#'
+#' @export
+trad_to_demohaz_siler_param <- function(a) {
+  if (any(a < 0)) {
+    stop('No element of a can be negative')
+  }
+
+  b <- a
+  b[4] <- log(a[5]/a[4]) / a[5]
+  return(b)
+}
+
+#' @title
+#' Convert from the demohaz to traditional Siler parameterization
+#'
+#' @description
+#' For the input vector a in the traditional parameterization, convert to the
+#' demohaz parameterization. The traditional parameterization of the hazard is
+#' a[1]*exp(a[2]*x) + a[3] + a[4]*exp(a[5]*x) whereas the demohaz
+#' parameterization is b[1]*exp(b[2]*x) + b[3] + b[5]*exp(b[5]*(x-b[4])). They
+#' are related via
+#'
+#' a[1] = b[1]
+#' a[2] = b[2]
+#' a[3] = b[3]
+#' a[4] = b[5]*exp(-b[4]*b[5])
+#' a[5] = b[5]
+#'
+#' @param b The demohaz pramaterization of the Siler hazard
+#'
+#' @return The traditional parameterization of the Siler hazard
+#'
+#' @export
+demohaz_to_trad_siler_param <- function(b) {
+  if (any(b < 0)) {
+    stop('No element of b can be negative')
+  }
+
+  a <- b
+  a[4] <- b[5]*exp(-b[4]*b[5])
+  return(a)
+}
+
+#' @title
+#' A utility function to check Siler inputs (b and x0)
+#'
+#' @description
+#' Ensure that b is positive. Ensure that x0>=0.
+#'
+#' @param b	The parameter vector
+#' @param x0 The conditional starting age
+#'
+#' @return None. An error is thrown if the inputs fail the checks.
+#'
+#' @export
+check_siler_inputs<- function(b, x0) {
+  # b cannot be negative (0 is okay, though possibly should not be allowed)
+  if (any(b < 0)) {
+    stop('No element of b can be negative')
+  }
+
+  # x0 cannot be negative
+  if(x0 < 0) {
+    stop("x0 cannot be negative")
+  }
 }
