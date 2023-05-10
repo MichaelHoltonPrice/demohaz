@@ -12,6 +12,9 @@ par_temper(
   prop_scale = 1,
   num_cyc = 100,
   num_cores = NA,
+  verbose = FALSE,
+  fn_plot = NULL,
+  report_period = 50,
   ...
 )
 }
@@ -34,6 +37,17 @@ length(temp_vect).}
 
 \item{num_cores}{Number of cores to use in parallel for loop (default: NA, no
 parallelization)}
+
+\item{verbose}{Whether to print out optimization information
+(default: FALSE)}
+
+\item{fn_plot}{A function that can be used to plot over the histogram of
+the data (xvalues/xcounts). If NULL, no plot is made
+(default: FALSE)}
+
+\item{report_period}{How often to update information, in steps. This is used
+both for printing out information (if verbose is TRUE) and making a plot
+(if fn_plot is not NULL) (default: 50)}
 
 \item{...}{Variables required by neg_log_cost_func}
 }
@@ -80,7 +94,4 @@ within-chain sampling followed by a single swap attempt is repeated num_cyc
 times. The minimum value of this procedure can be extracted from the output
 by calling the function par_temper_best.
 TODO: implement par_temper_best
-}
-\author{
-Michael Holton Price <MichaelHoltonPrice@gmail.com>
 }

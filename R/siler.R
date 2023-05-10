@@ -331,6 +331,7 @@ gradnllsiler <- function(b, x, x0 = 0) {
 #'   (default: 1e-5)
 #' @param verbose Whether to print out optimization information
 #'   (default: FALSE)
+#' @param show_plot Whether to plot progress (default: FALSE)
 #'
 #' @return A list consisting of the fit (on the transformed variable bbar) and
 #'   maximum likelihood estimate of b. Optionally, the Hessian of the
@@ -348,7 +349,8 @@ fit_siler <- function(x,
                              .917 * .1),
                       calc_hessian = FALSE,
                       lr=1e-5,
-                      verbose=FALSE) {
+                      verbose=FALSE,
+                      show_plot=FALSE) {
   # The traditional parameterization of the Siler hazard is
   # a1 * exp(-a2*x) + a3 + a4*exp(-a5*x)
   # The demohaz parameterization is related to this one per
@@ -368,11 +370,19 @@ fit_siler <- function(x,
   xvalues <- as.numeric(names(xtable))
   xcounts <- as.numeric(xtable)
 
+  if(show_plot) {
+    fn_plot <- plot_siler_fit_progress
+  } else {
+    fn_plot <- NULL
+  }
+
   # fast_transformed_nllsiler gives the negative log-likelihood for the
   # parameterization exp(bbar) = 
   fit <- temper_and_tune(fast_nllsiler,
+                         fast_gradnllsiler,
                          b0,
                          verbose=verbose,
+                         fn_plot=fn_plot,
                          xvalues = xvalues,
                          xcounts = xcounts,
                          lr=lr,
@@ -389,6 +399,29 @@ fit_siler <- function(x,
   }
 }
 
+#' @title
+#' A utility function to plot the progress of a Siler fit
+#'
+#' @description
+#' Plot the progress of a Siler fit. The input variables the parameter vector,
+#' b, as well as xvalues and xcounts (not x). A histogram is made of the actual
+#' data and the density from dsiler is plotted on top of it.
+#'
+#' @param b0 The Siler parameter vector
+#' @param xvalues The x-values
+#' @param xcounts The number of observations for each element in xvalues
+#'
+#' @export
+plot_siler_fit_progress <- function(b, x0, xvalues, xcounts) {
+  x <- c()
+  for (n in 1:length(xvalues)) {
+    x <- c(x, rep(xvalues[n], xcounts[n]))
+  }
+  hist(x, freq=FALSE, xlab='x', ylab='Density')
+  xplot <- seq(min(x), max(x), length=100)
+  lines(xplot, dsiler(xplot, b, x0))
+}
+ 
 #' @title
 #' Use counts to quickly calculate the Siler negative log-likelihood
 #'

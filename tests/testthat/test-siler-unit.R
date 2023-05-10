@@ -162,7 +162,6 @@ test_grads <- function(b, x, x0 = 0, tol = 1e-6) {
 
   analytical_grad <- gradnllsiler(b, x, x0)
   fast_grad <- fast_gradnllsiler(b, x, xcounts, x0)
-  print((fast_grad - analytical_grad)/analytical_grad)
 
   max_diff <- max(abs(analytical_grad - fast_grad))
   return(max_diff <= tol)
@@ -214,6 +213,12 @@ test_that("fit_siler does not throw errors for valid inputs", {
 
   # Test case 6: Setting lr to a non-default value
   expect_error(fit_siler(x, lr = 1e-4), NA)
+
+  # Test case 7: Setting lr to a non-default value
+  expect_error(fit_siler(x, lr = 1e-4), NA)
+
+  # Test case 8: Setting show_plot to TRUE
+  expect_error(fit_siler(x, verbose=TRUE, show_plot = TRUE), NA)
 })
 
 # Test trad_to_demohaz_siler_param function

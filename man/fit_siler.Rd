@@ -11,7 +11,8 @@ fit_siler(
     * 0.1),
   calc_hessian = FALSE,
   lr = 1e-05,
-  verbose = FALSE
+  verbose = FALSE,
+  show_plot = FALSE
 )
 }
 \arguments{
@@ -30,6 +31,8 @@ tranformed negative log-likelihood calculation.}
 
 \item{verbose}{Whether to print out optimization information
 (default: FALSE)}
+
+\item{show_plot}{Whether to plot progress (default: FALSE)}
 }
 \value{
 A list consisting of the fit (on the transformed variable bbar) and

@@ -4,20 +4,11 @@ library(demohaz)
 # Create a baseline parameter vector used across tests
 # a0 is the baseline parameter vector used to test Siler functions. It is from
 # Gage and Dyke 1986, Table 2, Level 15.
-a0 <- c(.175, 1.40, .368 * .01, .075 * .001, .917 * .1)
+#a0 <- c(.175, 1.40, .368 * .01, .075 * .001, .917 * .1)
 # Convert traditional parameterization to demohaz parameterization
-b0 <- trad_to_demohaz_siler_param(a0)
+#b0 <- trad_to_demohaz_siler_param(a0)
 
-test_that("hsiler function returns correct hazard values", {
-  # Test cases with various age inputs
-  expect_equal(hsiler(0, b0), a0[1] * exp(-a0[2] * 0) + a0[3] + a0[4] * exp(a0[5] * 0), tolerance = 1e-8)
-  expect_equal(hsiler(10, b0), a0[1] * exp(-a0[2] * 10) + a0[3] + a0[4] * exp(a0[5] * 10), tolerance = 1e-8)
-  expect_equal(hsiler(25, b0), a0[1] * exp(-a0[2] * 25) + a0[3] + a0[4] * exp(a0[5] * 25), tolerance = 1e-8)
-  expect_equal(hsiler(50, b0), a0[1] * exp(-a0[2] * 50) + a0[3] + a0[4] * exp(a0[5] * 50), tolerance = 1e-8)
-})# Load necessary library
-library(testthat)
-
-# Generate a smaller normal distribution sample
+# Generate a normal distribution sample
 set.seed(123)
 x <- rnorm(50, mean = 5, sd = 2)
 
@@ -78,6 +69,7 @@ test_that("gradient descent with plotting", {
   result <- gradient_descent(th0 = c(mu = 0, sigma = 1), fn0 = fn0, gr0 = gr0,
                              maxiter = 4000, report_period=10,
                              fn_plot = plot_normal, lr=1e-3, x = x)
+  expect_true('par' %in% names(result))
 })
 
 # This is a monolithic set of tests, but it's probably not worth the coding
@@ -1234,4 +1226,37 @@ test_that("par_temper works", {
     paste0("If prop_scale is a vector, it should be length 1 or the same length ",
            "as theta0")
   )
+})
+
+test_that("par_temper works when verbose is TRUE and fn_plot is specified", {
+  set.seed(123)
+  mu_true <- 50
+  sd_true <- 20
+  x <- rnorm(500, mean = 5, sd = 2)
+
+  expect_error(
+    temper <- par_temper(c(mu_true+1, sd_true-1),
+                         fn0,
+                         verbose=TRUE,
+                         x=x),
+    NA
+  )
+
+  expect_error(
+    temper <- par_temper(c(mu_true+1, sd_true-1),
+                         fn0,
+                         fn_plot=plot_normal,
+                         x=x),
+    NA
+  )
+
+  expect_error(
+    temper <- par_temper(c(mu_true+1, sd_true-1),
+                         fn0,
+                         verbose=TRUE,
+                         fn_plot=plot_normal,
+                         x=x),
+    NA
+  )
+
 })

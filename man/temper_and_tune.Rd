@@ -7,20 +7,35 @@ the optimization usking the Hooke-Jeeves algorithm.}
 \usage{
 temper_and_tune(
   obj_fun,
+  grad_fun,
   th0,
+  verbose = FALSE,
+  fn_plot = NULL,
   num_cyc = 100,
   samps_per_cyc = 20,
   temp_vect = 10^(rev(seq(-1, 1, by = 0.25))),
   prop_scale_mat = NULL,
-  verbose = FALSE,
   lr = 1e-05,
+  func_tol = 1e-06,
+  grad_tol = 0.01,
+  miniter = 1,
+  maxiter = 1000,
+  report_period = 50,
   ...
 )
 }
 \arguments{
 \item{obj_fun}{The objective function to minimize}
 
+\item{grad_fun}{The gradient function for the objective}
+
 \item{th0}{The starting point for minimization}
+
+\item{verbose}{Whether to print out optimization information
+(default: FALSE)}
+
+\item{fn_plot}{A function that can be used to plot progress. If NULL, no
+plot is made}
 
 \item{num_cyc}{Number of cycles for the tempering (default: 100)}
 
@@ -33,13 +48,34 @@ temper_and_tune(
 ranges evenly from 0.1 for the hottest temperature to 0.001 for the
 coldest temperature, for all parameter values at each temperature).}
 
-\item{verbose}{Whether to print out optimization information
-(default: FALSE)}
+\item{lr}{The learning rate to use
+(default: 1e-5) [for gradient_descent]}
 
-\item{lr}{The learning rate to use for fine tuning using gradient descent
-(default: 1e-5)}
+\item{func_tol}{A tolerance for changes in the objective function value. If
+the change in value is less than the tolerance, optimization can halt,
+though only if the grad_tol is condition is met (default: 1e-6).
+[for gradient_descent]}
+
+\item{grad_tol}{A tolerance for the absolute value of the gradient. All
+gradients must be lower than this tolerance value. If rescale is TRUE,
+the condition is applied to the rescaled gradient (default: 1e-2). Both
+the func_tol and grad_tol conditions must be satisfied to halt.
+[for gradient_descent]}
+
+\item{miniter}{The minimum number of iterations to use (default: 1)
+[for gradient_descent]}
+
+\item{maxiter}{The maximum number of iterations to use (default: 1000)
+[for gradient_descent]}
+
+\item{report_period}{How often to update information, in steps. This is used
+by both the tempering and gradient descent, but will not apply unless
+verbose is TRUE or fn_plot is not NULL. (default: 50)}
 
 \item{...}{Additional inputs to the objective function}
+
+\item{rescale}{Whether to rescale the parameter th by dividing by th0
+(default: FALSE) [for gradient_descent]}
 }
 \value{
 The best fit parameter vector

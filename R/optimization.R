@@ -13,7 +13,12 @@
 #' Additional inputs needed by the objective function can also be input.
 #'
 #' @param obj_fun The objective function to minimize
+#' @param grad_fun The gradient function for the objective
 #' @param th0 The starting point for minimization
+#' @param verbose Whether to print out optimization information
+#'   (default: FALSE)
+#' @param fn_plot A function that can be used to plot progress. If NULL, no
+#'   plot is made
 #' @param num_cyc Number of cycles for the tempering (default: 100)
 #' @param samps_per_cyc Samples per cycle for the tempering (default: 20)
 #' @param temp_vect Temperature vector for the tempering (default:
@@ -21,23 +26,47 @@
 #' @param prop_scale_mat Proposal scale matrix for the tempering (default:
 #'   ranges evenly from 0.1 for the hottest temperature to 0.001 for the
 #'   coldest temperature, for all parameter values at each temperature).
-#' @param verbose Whether to print out optimization information
-#'   (default: FALSE)
-#' @param lr The learning rate to use for fine tuning using gradient descent
-#'   (default: 1e-5)
+#' @param rescale Whether to rescale the parameter th by dividing by th0
+#'   (default: FALSE) [for gradient_descent]
+#' @param lr The learning rate to use
+#'   (default: 1e-5) [for gradient_descent]
+#' @param func_tol A tolerance for changes in the objective function value. If
+#'   the change in value is less than the tolerance, optimization can halt,
+#'   though only if the grad_tol is condition is met (default: 1e-6).
+#'   [for gradient_descent]
+#' @param grad_tol A tolerance for the absolute value of the gradient. All
+#'   gradients must be lower than this tolerance value. If rescale is TRUE,
+#'   the condition is applied to the rescaled gradient (default: 1e-2). Both
+#'   the func_tol and grad_tol conditions must be satisfied to halt.
+#'   [for gradient_descent]
+#' @param miniter The minimum number of iterations to use (default: 1)
+#'   [for gradient_descent]
+#' @param maxiter The maximum number of iterations to use (default: 1000)
+#'   [for gradient_descent]
+#' @param report_period How often to update information, in steps. This is used
+#'   by both the tempering and gradient descent, but will not apply unless
+#'   verbose is TRUE or fn_plot is not NULL. (default: 50)
+#
 #' @param ... Additional inputs to the objective function
 #'
 #' @return The best fit parameter vector
 #'
 #' @export
 temper_and_tune <- function(obj_fun,
+                            grad_fun,
                             th0,
+                            verbose=FALSE,
+                            fn_plot=NULL,
                             num_cyc=100,
                             samps_per_cyc=20,
                             temp_vect = 10^(rev(seq(-1,1,by=.25))),
                             prop_scale_mat = NULL,
-                            verbose=FALSE,
                             lr=1e-5,
+                            func_tol=1e-6,
+                            grad_tol=1e-2,
+                            miniter=1,
+                            maxiter=1000,
+                            report_period=50,
                             ...) {
   num_param <- length(th0)
 
@@ -64,6 +93,8 @@ temper_and_tune <- function(obj_fun,
                        prop_scale=prop_scale_mat,
                        num_cyc=num_cyc,
                        samps_per_cyc=samps_per_cyc,
+                       fn_plot=fn_plot,
+                       verbose=verbose,
                        ...)
 
   n <- which.min(unlist(lapply(temper$chains,function(x){x$eta_best})))
@@ -77,14 +108,18 @@ temper_and_tune <- function(obj_fun,
   }
 
   descent <- gradient_descent(th_temper,
-                             obj_fun,
-                             fast_gradnllsiler,
-                             lr=lr,
-                             100,
-                             1e-1,
-                             rescale=TRUE,
-                             verbose=verbose,
-                             ...)
+                              obj_fun,
+                              grad_fun,
+                              rescale=TRUE,
+                              lr=lr,
+                              func_tol=func_tol,
+                              grad_tol=grad_tol,
+                              miniter=miniter,
+                              maxiter=maxiter,
+                              verbose=verbose,
+                              fn_plot=fn_plot,
+                              report_period=report_period,
+                              ...)
 
   # TODO: support plotting in gradient_descent
   # Undo the scaling and, if necessary, print the result
@@ -594,13 +629,17 @@ par_temper <- function(theta0,
     doParallel::registerDoParallel(num_cores)
   }
 
-  if (iter %% report_period == 0) {
-    if(verbose) {
-      eta0 <- neg_log_cost_func(theta0,...)
-      print(paste0('Cycle: ', str(0)))
-      print(paste0('Obj. Func: ', str(eta0)))
+  if(verbose) {
+    eta0 <- neg_log_cost_func(theta0,...)
+    print(paste0('Cycle: ', 0))
+    print(paste0('Obj. Func: ', eta0))
+
+    if (!is.null(fn_plot)) {
+      fn_plot(theta0, ...)
     }
- 
+  }
+
+
   # Iterate over number of cycles
   for (cc in 1:num_cyc) {
     if (cc == 1) {
@@ -685,7 +724,23 @@ par_temper <- function(theta0,
     } else {
       swap_mat[3,cc] <- 0
     }
+
+
+    if (cc %% report_period == 0) {
+      nbest <- which.min(unlist(lapply(chains,function(x){x$eta_best})))
+      th_best <- chains[[nbest]]$theta_best
+      if(verbose) {
+        eta_best <- neg_log_cost_func(th_best,...)
+        print(paste0('Cycle: ', cc))
+        print(paste0('Obj. Func: ', eta_best))
+      }
+
+      if (!is.null(fn_plot)) {
+        fn_plot(th_best, ...)
+      }
+    }
   }
+
   output <- list(chains=chains,swap_mat=swap_mat,inputs=inputs)
   class(output) <- "par_temper"
   return(output)
