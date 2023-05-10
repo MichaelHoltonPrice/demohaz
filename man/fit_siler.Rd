@@ -10,9 +10,13 @@ fit_siler(
   b0 = c(0.175, 1.4, 0.368 * 0.01, log(0.917 * 0.1/(0.075 * 0.001))/(0.917 * 0.1), 0.917
     * 0.1),
   calc_hessian = FALSE,
+  num_cyc = 1000,
   lr = 1e-05,
+  miniter = 1000,
+  maxiter = 10000,
   verbose = FALSE,
-  show_plot = FALSE
+  show_plot = FALSE,
+  report_period = 50
 )
 }
 \arguments{

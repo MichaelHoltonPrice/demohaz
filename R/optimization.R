@@ -95,6 +95,7 @@ temper_and_tune <- function(obj_fun,
                        samps_per_cyc=samps_per_cyc,
                        fn_plot=fn_plot,
                        verbose=verbose,
+                       report_period=report_period,
                        ...)
 
   n <- which.min(unlist(lapply(temper$chains,function(x){x$eta_best})))
@@ -220,9 +221,9 @@ gradient_descent <- function(th0,
   f <- fn(th, ...)
   grad <- gr(th, ...)
   if(verbose) {
-    cat(sprintf("Iteration: %d, Objective function: %.3f, Gradient: %s\r",
-                0, f, toString(round(grad, 3))))
-    flush.console()
+    print(paste0('Iteration: ', 0))
+    print(paste0('Obj. Func: ', f))
+    print(paste0('Gradient : ', toString(round(grad, 3))))
   }
 
   for (iter in 1:maxiter) {
@@ -239,8 +240,8 @@ gradient_descent <- function(th0,
         # TODO: gradient is calculated twice if report_period=1
         #       could store the calculation for when it is made here
         grad <- gr(th, ...)  # Update gradient
-        print(paste0('Iteration: ', str(iter)))
-        print(paste0('Obj. Func: ', str(f_new)))
+        print(paste0('Iteration: ', iter))
+        print(paste0('Obj. Func: ', f_new))
         print(paste0('Gradient : ', toString(round(grad, 3))))
       }
       if (!is.null(fn_plot)) {

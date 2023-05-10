@@ -348,9 +348,13 @@ fit_siler <- function(x,
                              log(.917 * .1/(.075 * .001))/(.917 * .1),
                              .917 * .1),
                       calc_hessian = FALSE,
+                      num_cyc=1000,
                       lr=1e-5,
+                      miniter=1000,
+                      maxiter=10000,
                       verbose=FALSE,
-                      show_plot=FALSE) {
+                      show_plot=FALSE,
+                      report_period=50) {
   # The traditional parameterization of the Siler hazard is
   # a1 * exp(-a2*x) + a3 + a4*exp(-a5*x)
   # The demohaz parameterization is related to this one per
@@ -386,8 +390,11 @@ fit_siler <- function(x,
                          xvalues = xvalues,
                          xcounts = xcounts,
                          lr=lr,
-                         num_cyc=1000,
+                         num_cyc=num_cyc,
                          samps_per_cyc=20,
+                         miniter=miniter,
+                         maxiter=maxiter,
+                         report_period=report_period,
                          x0 = x0)
   
   b <- fit$th
