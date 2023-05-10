@@ -530,14 +530,21 @@ do_mh_sampling_at_temp <- function(init,
 #' @param num_cyc Number of cycles (a swap is attempted after each cycle).
 #' @param num_cores Number of cores to use in parallel for loop (default: NA, no
 #'   parallelization)
+#' @param verbose Whether to print out optimization information
+#'   (default: FALSE)
+#' @param fn_plot A function that can be used to plot over the histogram of
+#'   the data (xvalues/xcounts). If NULL, no plot is made
+#'   (default: FALSE)
+#' @param report_period How often to update information, in steps. This is used
+#'   both for printing out information (if verbose is TRUE) and making a plot
+#'   (if fn_plot is not NULL) (default: 50)
+
 #' @param ... Variables required by neg_log_cost_func
 #'
 #' @return An object of class \code{par_temper} that consists of (a) chains (the
 #'   sampled chains), (b) swap_mat, a matrix summarizing the results of the
 #'   swap attempts, and (c) inputs, the original inputs to the function.
 
-#' @author Michael Holton Price <MichaelHoltonPrice@@gmail.com>
-#'
 #' @import doParallel
 #' @import foreach
 #' @export
@@ -548,6 +555,9 @@ par_temper <- function(theta0,
                        prop_scale=1,
                        num_cyc=100,
                        num_cores=NA,
+                       verbose=FALSE,
+                       fn_plot=NULL,
+                       report_period=50,
                        ...) {
 
   inputs <- list(theta0=theta0,
@@ -584,6 +594,13 @@ par_temper <- function(theta0,
     doParallel::registerDoParallel(num_cores)
   }
 
+  if (iter %% report_period == 0) {
+    if(verbose) {
+      eta0 <- neg_log_cost_func(theta0,...)
+      print(paste0('Cycle: ', str(0)))
+      print(paste0('Obj. Func: ', str(eta0)))
+    }
+ 
   # Iterate over number of cycles
   for (cc in 1:num_cyc) {
     if (cc == 1) {
@@ -604,6 +621,7 @@ par_temper <- function(theta0,
         # Start new chains using a parallel for loop
         chains <-
           foreach(k=1:length(temp_vect)) %dopar% {
+            # Unclear whether, and when, demohaz:: is needed here
             demohaz::do_mh_sampling_at_temp(theta0,
                                             num_samp=samps_per_cyc,
                                             neg_log_cost_func=neg_log_cost_func,
