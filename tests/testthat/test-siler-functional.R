@@ -40,29 +40,27 @@ test_that("fit_siler works on simulated data", {
   # and x0=1 (use x0=0.1 rather than x0=10 so that the first two parameters can be
   # accurately fit).
   set.seed(291542) # from random.org
-  #N <- 500000
-  N <- 500
+  N <- 5000
   xsamp <- rsiler(N, b0)
   # jitter starting vector for fit so that we don't start already at the optimum.
   b1 <- b0 * runif(5, min = .9, max = 1.1)
-  silerFit <- fit_siler(xsamp, b1)
+  silerFit <- fit_siler(xsamp, b0=b1)
   expect_equal(
     b0,
     silerFit$b, tol = 5e-3
   )
   
-#  set.seed(795075) # from random.org
-#  x0 <- 0.1
-#  N <- 500000
-#  xsamp <- rsiler(N, a0, x0)
-#  # jitter starting vector for fit so that we don't start already at the optimum.
-#  a1 <- a0 * runif(5, min = .9, max = 1.1)
-#  silerFit <- fit_siler(xsamp, a1, x0=x0)
-#  expect_equal(
-#    a0,
-#    silerFit$a, tol = 5e-3
-#  )
-#
+  set.seed(795075) # from random.org
+  x0 <- 0.1
+  N <- 5000
+  xsamp <- rsiler(N, b0, x0)
+  # jitter starting vector for fit so that we don't start already at the optimum.
+  b1 <- b0 * runif(5, min = .9, max = 1.1)
+  silerFit <- fit_siler(xsamp,b0=b1, x0=x0)
+  expect_equal(
+    b0,
+    silerFit$b, tol = 5e-3
+  )
 })
   
 

@@ -46,7 +46,7 @@ The best fit parameter vector
 }
 \description{
 This method does robust function minimization by doing an initial
-optimization using the parallel tempering algorithm in the enneal package,
+optimization using the parallel tempering algorithm in the this package,
 then fine tuning that optimization using the Hooke-Jeeves algorithm from the
 dfoptim package. The first input is the objective function to be minimized
 and the second input is the starting parameter vector. Optionally, control

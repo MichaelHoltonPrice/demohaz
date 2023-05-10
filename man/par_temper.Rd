@@ -61,7 +61,7 @@ algorithm consists of a set of within-in chain Metropolis samples for each
 temperature, followed by a single attempt to randomly swap samples across
 chains for a single, randomly chosen pair of adjacent temperatures (k and
 k+1). M within chain samples are made by calling the function
-enneal::do_mh_sampling_at_temp. Following these within-chain samples, an
+do_mh_sampling_at_temp. Following these within-chain samples, an
 attempt is made to swap samples between one pair of adjacent temperatures,
 also using a Metropolis criterion. The pair for which this is attempted is
 randomly chosen. Let k be the lower temperature. The weighting accorded the

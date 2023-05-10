@@ -4,7 +4,7 @@
 #'
 #' @description
 #' This method does robust function minimization by doing an initial
-#' optimization using the parallel tempering algorithm in the enneal package,
+#' optimization using the parallel tempering algorithm in the this package,
 #' then fine tuning that optimization using the Hooke-Jeeves algorithm from the
 #' dfoptim package. The first input is the objective function to be minimized
 #' and the second input is the starting parameter vector. Optionally, control
@@ -58,13 +58,13 @@ temper_and_tune <- function(obj_fun,
   }
   # TODO: add verbosity to par_temper
   # TODO: support plotting in par_temper
-  temper <- enneal::par_temper(th0,
-                               obj_fun,
-                               temp_vect=temp_vect,
-                               prop_scale=prop_scale_mat,
-                               num_cyc=num_cyc,
-                               samps_per_cyc=samps_per_cyc,
-                               ...)
+  temper <- par_temper(th0,
+                       obj_fun,
+                       temp_vect=temp_vect,
+                       prop_scale=prop_scale_mat,
+                       num_cyc=num_cyc,
+                       samps_per_cyc=samps_per_cyc,
+                       ...)
 
   n <- which.min(unlist(lapply(temper$chains,function(x){x$eta_best})))
   th_temper <- temper$chains[[n]]$theta_best
@@ -498,7 +498,7 @@ do_mh_sampling_at_temp <- function(init,
 #' temperature, followed by a single attempt to randomly swap samples across
 #' chains for a single, randomly chosen pair of adjacent temperatures (k and
 #' k+1). M within chain samples are made by calling the function
-#' enneal::do_mh_sampling_at_temp. Following these within-chain samples, an
+#' do_mh_sampling_at_temp. Following these within-chain samples, an
 #' attempt is made to swap samples between one pair of adjacent temperatures,
 #' also using a Metropolis criterion. The pair for which this is attempted is
 #' randomly chosen. Let k be the lower temperature. The weighting accorded the
@@ -604,13 +604,13 @@ par_temper <- function(theta0,
         # Start new chains using a parallel for loop
         chains <-
           foreach(k=1:length(temp_vect)) %dopar% {
-            do_mh_sampling_at_temp(theta0,
-                                   num_samp=samps_per_cyc,
-                                   neg_log_cost_func=neg_log_cost_func,
-                                   temp=temp_vect[k],
-                                   prop_scale=prop_scale[,k],
-                                   save_theta=T,
-                                   ...)
+            demohaz::do_mh_sampling_at_temp(theta0,
+                                            num_samp=samps_per_cyc,
+                                            neg_log_cost_func=neg_log_cost_func,
+                                            temp=temp_vect[k],
+                                            prop_scale=prop_scale[,k],
+                                            save_theta=T,
+                                            ...)
           }
       }
     } else {
@@ -672,79 +672,3 @@ par_temper <- function(theta0,
   class(output) <- "par_temper"
   return(output)
 }
-
-#gradient_descent <- function(th0,
-                             #fn0,
-                             #gr0,
-                             #rescale=FALSE,
-                             #lr=1e-5,
-                             #func_tol=1e-6,
-                             #grad_tol=1e-2,
-                             #miniter=1,
-                             #maxiter=10000,
-                             #verbose=FALSE,
-                             #fn_plot=NULL,
-                             #report_period=50,
-                             #...) {
-  ## If is TRUE, then rescale each variable by th0 during the optimization,
-  ## including for the gradient call. This requires scaling th and defining
-  ## wrappers for fn0 and gr0 (hence why they have 0 added).
-  #if (rescale) {
-    #th <- rep(1, length(th0))
-    #fn <- function(th,...) {
-      #return(fn0(th*th0, ...))
-    #}
-    #gr <- function(th,...) {
-      #grad <- gr0(th*th0,...)
-      #return(grad*th0)
-    #}
-  #} else {
-    #th <- th0
-    #fn <- fn0(th,...)
-    #gr <- gr0(th,...)
-  #}
-
-  #f <- fn(th, ...)
-  #grad <- gr(th, ...)
-  #if(verbose) {
-    #cat(sprintf("Iteration: %d, Objective function: %.3f, Gradient: %s\r",
-                #0, f, toString(round(grad, 3))))
-    #flush.console()  # Ensure that the output is updated immediately
-  #}
-
-  #for (iter in 1:maxiter) {
-    #grad <- gr(th, ...)
-
-    ## Check the gradient norm
-    #if (all(abs(grad) < grad_tol)) break
-
-    #th_new <- th - lr * grad
-    #f_new <- fn(th_new, ...)
-
-    ## Check the change in the objective function value
-    ##if (abs(fx_new - fx) < tol) break
-
-    #th <- th_new
-    #f <- f_new
-    #if(verbose) {
-      #cat(sprintf("Iteration: %d, Objective function: %.3f, Gradient: %s\r",
-                  #iter, f, toString(round(grad, 3))))
-      #flush.console()  # Ensure that the output is updated immediately
-    #}
-  #}
- 
-  #inputs <- list(th0=th0,
-                 #fn0=fn0,
-                 #gr0=gr0,
-                 #rescale=rescale,
-                 #lr=lr,
-                 #func_tol=func_tol,
-                 #grad_tol=grad_tol,
-                 #miniter=miniter,
-                 #maxiter=maxiter,
-                 #verbose=verbose,
-                 #fn_plot=fn_plot,
-                 #report_period=report_period)
-
-  #return(list(par = th, value = f, feval = iter, inputs=inputs))
-#}
