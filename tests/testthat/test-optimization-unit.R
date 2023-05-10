@@ -38,6 +38,14 @@ gr0 <- function(par, x) {
   return(c(dmu, dsigma))
 }
 
+# Define a plotting function for the normal
+plot_normal <- function(par, x) {
+  hist(x, freq=F)
+  xplot <- seq(min(x), max(x), length=100)
+  fplot <- dnorm(xplot, par[1], par[2])
+  lines(xplot, fplot, lwd=3)
+}
+
 # Unit tests for gradient descent. Functionality is tested in
 # test-optimization-functional.R. The units tests are representative but not
 # comprehensive.
@@ -64,4 +72,10 @@ test_that("gradient descent works with verbose=TRUE", {
 test_that("gradient descent halts at maxiter", {
   result <- gradient_descent(th0 = c(mu = 0, sigma = 1), fn0 = fn0, gr0 = gr0, maxiter = 10, x = x)
   expect_equal(result$feval, 10)
+})
+
+test_that("gradient descent with plotting", {
+  result <- gradient_descent(th0 = c(mu = 0, sigma = 1), fn0 = fn0, gr0 = gr0,
+                             maxiter = 4000, report_period=10,
+                             fn_plot = plot_normal, lr=1e-3, x = x)
 })

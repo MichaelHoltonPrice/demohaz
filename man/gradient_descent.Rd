@@ -27,6 +27,9 @@ gradient_descent(
 
 \item{gr0}{The gradient of the objective function to minimize}
 
+\item{rescale}{Whether to rescale the parameter th by dividing by th0
+(default: FALSE)}
+
 \item{lr}{The learning rate to use for fine tuning using gradient descent
 (default: 1e-5)}
 
