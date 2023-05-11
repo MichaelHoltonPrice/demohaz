@@ -111,8 +111,8 @@ lines(xplot, dsiler(xplot, fit$b, x0=x0), lwd=3)
 For additional information, including on functionality not covered in this
 quick start, see the documentation for demohaz and the github repository
 linked to above. In addition, by design the demohaz tests (see below) provide comprehensive coverage of the demohaz functionality. While the tests were not
-designed and commented to be user-friendly example code, they do provide
-comprehensive examples of demohaz functionality.
+designed to be user-friendly example code, they do provide comprehensive
+examples of demohaz functionality.
 
 # Tests
 There are two types of tests: unit tests and functional tests. These tests
