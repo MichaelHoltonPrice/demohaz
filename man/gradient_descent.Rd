@@ -68,7 +68,7 @@ A list containing par (the best-fit parameter value), value (the
 Do vanilla gradient descent. Optionally, if rescale is TRUE, the gradient
 is calculated after dividing by the starting parameter vector par. There are
 two reasons why demohaz implements its own optimziation algorithms. First,
-it reduces dependenceies on third-party packages. Second, it allows
+it reduces dependencies on third-party packages. Second, it allows
 precise control over how to provide diagnostic information (e.g., printing
 optimization information if verbose is TRUE and plotting the fit if
 show_plot is TRUE).

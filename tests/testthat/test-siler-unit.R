@@ -73,8 +73,75 @@ test_that("qsiler throws errors for invalid inputs", {
                       fixed=TRUE)
 })
 
-# TODO: rsiler
-# TODO: hesiler
+test_that("rsiler returns expected types", {
+  set.seed(123)
+  N <- 100
+  b <- c(0.1, 0.1, 0.1, 0.1, 0.1)
+  x0 <- 0
+
+  result <- rsiler(N, b, x0)
+
+  expect_type(result, "double")
+  expect_length(result, N)
+})
+
+test_that("rsiler works with different x0", {
+  set.seed(123)
+  N <- 100
+  b <- c(0.1, 0.1, 0.1, 0.1, 0.1)
+  x0 <- 10
+
+  result <- rsiler(N, b, x0)
+
+  expect_type(result, "double")
+  expect_length(result, N)
+})
+
+test_that("rsiler returns different results with different seeds", {
+  N <- 100
+  b <- c(0.1, 0.1, 0.1, 0.1, 0.1)
+  x0 <- 0
+
+  set.seed(123)
+  result1 <- rsiler(N, b, x0)
+
+  set.seed(456)
+  result2 <- rsiler(N, b, x0)
+
+  expect_false(identical(result1, result2))
+})
+
+test_that("hesiler returns a matrix with the correct dimensions", {
+  b <- c(0.1, 0.2, 0.3, 0.4, 0.5)
+  x <- seq(1, 5)
+  x0 <- 0
+
+  result <- hesiler(b, x, x0)
+
+  expect_type(result, "double")
+  expect_equal(dim(result), c(5, 5))
+})
+
+test_that("hesiler returns a symmetric matrix", {
+  b <- c(0.1, 0.2, 0.3, 0.4, 0.5)
+  x <- seq(1, 5)
+  x0 <- 0
+
+  result <- hesiler(b, x, x0)
+
+  expect_true(all(result == t(result)))
+})
+
+test_that("hesiler works with different x0", {
+  b <- c(0.1, 0.2, 0.3, 0.4, 0.5)
+  x <- seq(1, 5)
+  x0 <- 10
+
+  result <- hesiler(b, x, x0)
+
+  expect_type(result, "double")
+  expect_equal(dim(result), c(5, 5))
+})
 
 test_that("grad_hsiler_vect returns the correct gradient matrix", {
   set.seed(123)
@@ -167,7 +234,7 @@ test_grads <- function(b, x, x0 = 0, tol = 1e-6) {
   return(max_diff <= tol)
 }
 
-# TODO: this is a functional test. Move?
+# TODO: this is more a functional test. Move? It really doesn't matter.
 test_that("fast and analytical gradient calculations match", {
   # Generate random data for testing
   set.seed(10000)
@@ -209,6 +276,8 @@ test_that("fit_siler does not throw errors for valid inputs", {
   expect_error(fit_siler(x, calc_hessian = TRUE), NA)
 
   # Test case 5: Setting verbose to TRUE
+  # Send output to a temporary file so that test progress is not obscured
+  sink(tempfile())
   expect_error(fit_siler(x, verbose = TRUE), NA)
 
   # Test case 6: Setting lr to a non-default value
@@ -219,6 +288,7 @@ test_that("fit_siler does not throw errors for valid inputs", {
 
   # Test case 8: Setting show_plot to TRUE
   expect_error(fit_siler(x, verbose=TRUE, show_plot = TRUE), NA)
+  sink()
 })
 
 # Test trad_to_demohaz_siler_param function

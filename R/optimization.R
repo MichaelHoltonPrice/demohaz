@@ -1,16 +1,17 @@
 #' @title
-#' Solve a minimization problem by doing an initial tempering then fine-tuning
-#' the optimization usking the Hooke-Jeeves algorithm.
+#' Solve a minimization problem using parallel tempering and gradient descent
+#' the optim
 #'
 #' @description
 #' This method does robust function minimization by doing an initial
-#' optimization using the parallel tempering algorithm in the this package,
-#' then fine tuning that optimization using the Hooke-Jeeves algorithm from the
-#' dfoptim package. The first input is the objective function to be minimized
-#' and the second input is the starting parameter vector. Optionally, control
-#' parameters for the tempering can be input (the number of cycles, number of
-#' samples per cycle, temperature vector, and proposal scaling matrix).
-#' Additional inputs needed by the objective function can also be input.
+#' optimization using parallel tempering algorithm, then fine tuning using
+#' vanilla gradient descent. The first input is the objective function to be
+#' minimized (usually a negative log-likelihood) and the second input is a
+#' function that calculates the gradient of the objective function. The third
+#' input, an initial parameter vector for the temepring, is required. All
+#' other inputs are optional. These optional inputs are control variables for
+#' the two optimizations and switches and hooks to provide information on the
+#' progress of the fit.
 #'
 #' @param obj_fun The objective function to minimize
 #' @param grad_fun The gradient function for the objective
@@ -26,8 +27,6 @@
 #' @param prop_scale_mat Proposal scale matrix for the tempering (default:
 #'   ranges evenly from 0.1 for the hottest temperature to 0.001 for the
 #'   coldest temperature, for all parameter values at each temperature).
-#' @param rescale Whether to rescale the parameter th by dividing by th0
-#'   (default: FALSE) [for gradient_descent]
 #' @param lr The learning rate to use
 #'   (default: 1e-5) [for gradient_descent]
 #' @param func_tol A tolerance for changes in the objective function value. If
@@ -49,7 +48,11 @@
 #
 #' @param ... Additional inputs to the objective function
 #'
-#' @return The best fit parameter vector
+#' @return A list with the inputs (obj_fun, grad_fun, th0, and a list
+#'   containing all the optional inputs), details on the tempering (temper),
+#'   the best fit parameter vector from the tempering (th_temper), deatils on
+#'   on the gradient descent (descent), and the final best-fit parameter
+#'   vector from the gradient descent (th).
 #'
 #' @export
 temper_and_tune <- function(obj_fun,
@@ -85,8 +88,6 @@ temper_and_tune <- function(obj_fun,
     print('Starting objective function value eta = ')
     print(obj_fun(th0, ...))
   }
-  # TODO: add verbosity to par_temper
-  # TODO: support plotting in par_temper
   temper <- par_temper(th0,
                        obj_fun,
                        temp_vect=temp_vect,
@@ -122,7 +123,6 @@ temper_and_tune <- function(obj_fun,
                               report_period=report_period,
                               ...)
 
-  # TODO: support plotting in gradient_descent
   # Undo the scaling and, if necessary, print the result
   th <- descent$par*th_temper
   if(verbose) {
@@ -131,8 +131,23 @@ temper_and_tune <- function(obj_fun,
     print(descent$value)
   }
 
+  optional_inputs <- list(verbose=verbose,
+                          fn_plot=fn_plot,
+                          num_cyc=num_cyc,
+                          samps_per_cyc=samps_per_cyc,
+                          temp_vect = temp_vect,
+                          prop_scale_mat = prop_scale_mat,
+                          lr=lr,
+                          func_tol=func_tol,
+                          grad_tol=grad_tol,
+                          miniter=miniter,
+                          maxiter=maxiter,
+                          report_period=report_period)
+
   return(list(obj_fun=obj_fun,
+              grad_fun=grad_fun,
               th0=th0,
+              optional_inputs=optional_inputs,
               temper=temper,
               th_temper=th_temper,
               descent=descent,
@@ -146,7 +161,7 @@ temper_and_tune <- function(obj_fun,
 #' Do vanilla gradient descent. Optionally, if rescale is TRUE, the gradient
 #' is calculated after dividing by the starting parameter vector par. There are
 #' two reasons why demohaz implements its own optimziation algorithms. First,
-#' it reduces dependenceies on third-party packages. Second, it allows
+#' it reduces dependencies on third-party packages. Second, it allows
 #' precise control over how to provide diagnostic information (e.g., printing
 #' optimization information if verbose is TRUE and plotting the fit if
 #' show_plot is TRUE).
@@ -303,12 +318,12 @@ gradient_descent <- function(th0,
 #' @return A list-like object of class "mh_chain" with sampling information
 #' @export
 do_mh_sampling_at_temp <- function(init,
-                           neg_log_cost_func=NA,
-                           num_samp=NA,
-                           temp=NA,
-                           prop_scale=NA,
-                           save_theta=NA,
-                           ...) {
+                                   neg_log_cost_func=NA,
+                                   num_samp=NA,
+                                   temp=NA,
+                                   prop_scale=NA,
+                                   save_theta=NA,
+                                   ...) {
 
   # TODO: explore saving the ... parameters for use in continuing chains.
 
@@ -550,9 +565,7 @@ do_mh_sampling_at_temp <- function(init,
 #'
 #' The swap is accepted with probability a, and otherwise rejected. The cycle of
 #' within-chain sampling followed by a single swap attempt is repeated num_cyc
-#' times. The minimum value of this procedure can be extracted from the output
-#' by calling the function par_temper_best.
-#' TODO: implement par_temper_best
+#' times.
 #'
 #' @param theta0 The starting point for sampling (used to initialize all chains)
 #' @param neg_log_cost_func The negative log of the cost function
@@ -728,6 +741,7 @@ par_temper <- function(theta0,
 
 
     if (cc %% report_period == 0) {
+      # TODO: implement par_temper_best
       nbest <- which.min(unlist(lapply(chains,function(x){x$eta_best})))
       th_best <- chains[[nbest]]$theta_best
       if(verbose) {

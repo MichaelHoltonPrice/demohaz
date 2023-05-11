@@ -7,25 +7,22 @@
 fast_nllsiler(b, xvalues, xcounts, x0 = 0)
 }
 \arguments{
+\item{b}{The Siler parameter vector}
+
 \item{xvalues}{Locations at which to evaluate probability density function}
 
 \item{xcounts}{The number of observations for each entry in xvalues}
 
 \item{x0}{The conditional starting age [default: 0].}
-
-\item{bbar}{The transformed parameter vector, used to increase robustness of
-fitting}
-
-\item{b0}{The baseline parameter vector}
 }
 \value{
 The negative log-likelihood
 }
 \description{
 Calculate the negative log-likelihood of the Siler probability density.
-This can often be done much faster by tabulating repeated x-values If there
+This can often be done much faster by tabulating repeated x-values. If there
 are no (or few) repeats, there is little speed loss from using tabulated
-values. The inputs are a vector of x-values, xvalues, and corresponding
+values. The inputs are a vector of x values, xvalues, and corresponding
 counts, xcounts, both of which are pre-computed. These two vectors can be
 created from the vector of ages, x, using the following code:
 
@@ -36,19 +33,4 @@ xcounts <- as.numeric(xtable)
 The Siler hazard is:
 
 lambda(x) = b1 * exp(-b_2*x) + b_3 + b5 * exp(b5*(x-b4))
-
-Let b0 be a baseline parameter vector and define the transformed parameter
-vector bbar to be (the notation is modified slightly from, e.g., b1 to b_1
-to accommodate the initial parameter vector being b0)
-
-b_1 = b0_1 * exp(bbar1)
-b_2 = b0_2 * exp(bbar2)
-b_3 = b0_3 * exp(bbar3)
-b_4 = b0_4 * exp(bbar4)
-b_5 = b0_5 * exp(bbar5)
-
-This second transformation allows the parameter vector bbar to be
-unconstrained (positive or negative) while the parameter vector b is
-positive (assuming that the baseline vector beta is positive, which should
-be ensured in its construction).
 }

@@ -2,8 +2,8 @@
 % Please edit documentation in R/optimization.R
 \name{temper_and_tune}
 \alias{temper_and_tune}
-\title{Solve a minimization problem by doing an initial tempering then fine-tuning
-the optimization usking the Hooke-Jeeves algorithm.}
+\title{Solve a minimization problem using parallel tempering and gradient descent
+the optim}
 \usage{
 temper_and_tune(
   obj_fun,
@@ -73,20 +73,22 @@ by both the tempering and gradient descent, but will not apply unless
 verbose is TRUE or fn_plot is not NULL. (default: 50)}
 
 \item{...}{Additional inputs to the objective function}
-
-\item{rescale}{Whether to rescale the parameter th by dividing by th0
-(default: FALSE) [for gradient_descent]}
 }
 \value{
-The best fit parameter vector
+A list with the inputs (obj_fun, grad_fun, th0, and a list
+  containing all the optional inputs), details on the tempering (temper),
+  the best fit parameter vector from the tempering (th_temper), deatils on
+  on the gradient descent (descent), and the final best-fit parameter
+  vector from the gradient descent (th).
 }
 \description{
 This method does robust function minimization by doing an initial
-optimization using the parallel tempering algorithm in the this package,
-then fine tuning that optimization using the Hooke-Jeeves algorithm from the
-dfoptim package. The first input is the objective function to be minimized
-and the second input is the starting parameter vector. Optionally, control
-parameters for the tempering can be input (the number of cycles, number of
-samples per cycle, temperature vector, and proposal scaling matrix).
-Additional inputs needed by the objective function can also be input.
+optimization using parallel tempering algorithm, then fine tuning using
+vanilla gradient descent. The first input is the objective function to be
+minimized (usually a negative log-likelihood) and the second input is a
+function that calculates the gradient of the objective function. The third
+input, an initial parameter vector for the temepring, is required. All
+other inputs are optional. These optional inputs are control variables for
+the two optimizations and switches and hooks to provide information on the
+progress of the fit.
 }

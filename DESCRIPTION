@@ -2,13 +2,15 @@ Type: Package
 Package: demohaz
 Title: Tools for fitting demographic hazard models
 Version: 0.1.1
-Author: Saige Kelmelis and Michael Holton Price
-Maintainer: Michael Holton Price <michaelholtonprice@sgmail.com>
+Author: Michael Holton Price
+Maintainer: Michael Holton Price <MichaelHoltonPrice@gmail.com>
 Description: demohaz—Demographic Hazard Models
 License: MIT + file LICENSE
 Imports:
     demogR,
-    Deriv
+    Deriv,
+    doParallel,
+    foreach
 Suggests:
 VignetteBuilder:
     knitr

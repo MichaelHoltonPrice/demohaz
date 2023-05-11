@@ -37,7 +37,7 @@
 #' \code{rsiler} random draws, \code{hsiler} the hazard, \code{chsiler} the
 #' cumulative hazard, \code{ssiler} the survival, \code{nllsiler} the negative
 #' log-likelihood, and \code{hesiler} the Hessian. fit_siler performs a robust,
-#' maximum likelihood fit to yield the best-fit parameter vector a.
+#' maximum likelihood fit to yield the best-fit parameter vector b.
 #'
 #' @param x The vector of ages
 #' @param b The parameter vector
@@ -316,10 +316,10 @@ gradnllsiler <- function(b, x, x0 = 0) {
 #' Maximum likelihood fit for the Siler distribution
 #'
 #' @description
-#' Do a maximum likelihood Siler fit given the input vector of ages, x. To
-#' allow unconstrained optimization to be used, optimization is done on the
-#' transformed variable bbar (see the description for the function
-#' fast_transformed_nllsiler).
+#' Do a maximum likelihood Siler fit given the input vector of ages, x. An
+#' initial stochastic optimization is done parallel tempering. The best
+#' parameter vector from the tempering is used to initialize a fine tuning
+#' using vanilla gradient descent.
 #'
 #' @param x Locations at which to evaluate probability density function
 #' @param x0 The conditional starting age. The default is 0 (no offset).
@@ -327,17 +327,22 @@ gradnllsiler <- function(b, x, x0 = 0) {
 #'   Table 2, Level 15. This is also used for the baseline age in the
 #'   tranformed negative log-likelihood calculation.
 #' @param calc_hessian Whether to calculate the Hessian (default FALSE)
-#' @param lr The learning rate to use for fine tuning using gradient descent
+#' @param num_cyc Number of cycles for tempering
+#' @param lr The learning rate for gradient descent
 #'   (default: 1e-5)
+#' @param miniter The minimum number of iterations for gradient descent
+#' @param maxiter The maximum number of iterations for gradient descent
 #' @param verbose Whether to print out optimization information
 #'   (default: FALSE)
 #' @param show_plot Whether to plot progress (default: FALSE)
+#' @param report_period How frequently to report information, which includes
+#'   printing out information (if verbose is TRUE) and plotting the progress
+#'   (if show_plot is TRUE). For tempering, this is with respect to cycles and
+#'   for gradient descent this is with respect to iterations.
 #'
-#' @return A list consisting of the fit (on the transformed variable bbar) and
-#'   maximum likelihood estimate of b. Optionally, the Hessian of the
-#'   log-likelihood is returned, which allows estimation of the standard errors
-#'   of the maximum likelihood estimate via the observed Fisher information
-#'   matrix.
+#' @return A list consisting of the best-fit parameter vector, b, a fit object
+#'   containing detailed information about the fit, and, optionally, the
+#'   Hessian of the negative log-likelihood.
 #'
 #' @export
 fit_siler <- function(x,
@@ -380,8 +385,6 @@ fit_siler <- function(x,
     fn_plot <- NULL
   }
 
-  # fast_transformed_nllsiler gives the negative log-likelihood for the
-  # parameterization exp(bbar) = 
   fit <- temper_and_tune(fast_nllsiler,
                          fast_gradnllsiler,
                          b0,
@@ -415,6 +418,7 @@ fit_siler <- function(x,
 #' data and the density from dsiler is plotted on top of it.
 #'
 #' @param b0 The Siler parameter vector
+#' @param x0 The conditional starting age [default: 0].
 #' @param xvalues The x-values
 #' @param xcounts The number of observations for each element in xvalues
 #'
@@ -434,9 +438,9 @@ plot_siler_fit_progress <- function(b, x0, xvalues, xcounts) {
 #'
 #' @description
 #' Calculate the negative log-likelihood of the Siler probability density.
-#' This can often be done much faster by tabulating repeated x-values If there
+#' This can often be done much faster by tabulating repeated x-values. If there
 #' are no (or few) repeats, there is little speed loss from using tabulated
-#' values. The inputs are a vector of x-values, xvalues, and corresponding
+#' values. The inputs are a vector of x values, xvalues, and corresponding
 #' counts, xcounts, both of which are pre-computed. These two vectors can be
 #' created from the vector of ages, x, using the following code:
 #'
@@ -448,35 +452,18 @@ plot_siler_fit_progress <- function(b, x0, xvalues, xcounts) {
 #'
 #' lambda(x) = b1 * exp(-b_2*x) + b_3 + b5 * exp(b5*(x-b4))
 #'
-#' Let b0 be a baseline parameter vector and define the transformed parameter
-#' vector bbar to be (the notation is modified slightly from, e.g., b1 to b_1
-#' to accommodate the initial parameter vector being b0)
-#'
-#' b_1 = b0_1 * exp(bbar1)
-#' b_2 = b0_2 * exp(bbar2)
-#' b_3 = b0_3 * exp(bbar3)
-#' b_4 = b0_4 * exp(bbar4)
-#' b_5 = b0_5 * exp(bbar5)
-#'
-#' This second transformation allows the parameter vector bbar to be
-#' unconstrained (positive or negative) while the parameter vector b is
-#' positive (assuming that the baseline vector beta is positive, which should
-#' be ensured in its construction).
-#'
-#' @param bbar The transformed parameter vector, used to increase robustness of
-#'   fitting
+#' @param b The Siler parameter vector
 #' @param xvalues Locations at which to evaluate probability density function
 #' @param xcounts The number of observations for each entry in xvalues
-#' @param b0 The baseline parameter vector
 #' @param x0 The conditional starting age [default: 0].
 #'
 #' @return The negative log-likelihood
 #'
 #' @export
 fast_nllsiler <- function(b,
-                                      xvalues,
-                                      xcounts,
-                                      x0=0) {
+                          xvalues,
+                          xcounts,
+                          x0=0) {
   if (any(b < 0)) {
     return(Inf)
   }
@@ -495,7 +482,7 @@ fast_nllsiler <- function(b,
 }
 
 #' @title
-#' Vectorized calculation of the gradient of the Siler hazard, lambda
+#' Vectorized calculation of the gradient of the Siler hazard
 #'
 #' @description
 #' Calculate the gradient of the Siler hazard, lambda, for each age in the
@@ -532,7 +519,7 @@ grad_hsiler_vect <- function(x, b) {
 }
 
 #' @title
-#' Vectorized calculation of the Siler hazard, lambda
+#' Vectorized calculation of the Siler hazard
 #'
 #' @description
 #' Calculate the the Siler hazard, lambda, for each age in the input vector x.
@@ -593,6 +580,20 @@ grad_chsiler_vect <- function(x, b, x0=0) {
   return(grad_matrix)
 }
 
+#' @title
+#' Fast calculation of the gradient of the Siler negative log-likelihood
+#'
+#' @description
+#' Calculate the gradient of the Siler negative log-likelihood using tabulated
+#' values (xvalues and xcounts; see the documentation for fast_nllsiler).
+#'
+#' @param b Siler parameter vector
+#' @param xvalues x values for the calculation
+#' @param xcounts The number of observations for each entry in xvalues
+#' @param x0 The conditional starting age [default: 0].
+#'
+#' @return The gradient of the negative log-likelihood (a vector of length 5)
+#'
 #' @export
 fast_gradnllsiler <- function(b,
                               xvalues,

@@ -51,5 +51,5 @@ cumulative distribution function, \code{qsiler} the quantile function,
 \code{rsiler} random draws, \code{hsiler} the hazard, \code{chsiler} the
 cumulative hazard, \code{ssiler} the survival, \code{nllsiler} the negative
 log-likelihood, and \code{hesiler} the Hessian. fit_siler performs a robust,
-maximum likelihood fit to yield the best-fit parameter vector a.
+maximum likelihood fit to yield the best-fit parameter vector b.
 }

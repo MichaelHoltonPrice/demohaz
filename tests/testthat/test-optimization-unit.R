@@ -55,10 +55,13 @@ test_that("gradient descent works with rescale=TRUE", {
   expect_is(result, "list")
 })
 
+# Send output to a temporary file so that test progress is not obscured
+sink(tempfile())
 test_that("gradient descent works with verbose=TRUE", {
   result <- gradient_descent(th0 = c(mu = 0, sigma = 1), fn0 = fn0, gr0 = gr0, rescale = TRUE, x = x)
   expect_is(result, "list")
 })
+sink()
 
 test_that("gradient descent halts at maxiter", {
   result <- gradient_descent(th0 = c(mu = 0, sigma = 1), fn0 = fn0, gr0 = gr0, maxiter = 10, x = x)
@@ -1234,6 +1237,8 @@ test_that("par_temper works when verbose is TRUE and fn_plot is specified", {
   sd_true <- 20
   x <- rnorm(500, mean = 5, sd = 2)
 
+  # Send output to a temporary file so that test progress is not obscured
+  sink(tempfile())
   expect_error(
     temper <- par_temper(c(mu_true+1, sd_true-1),
                          fn0,
@@ -1258,5 +1263,6 @@ test_that("par_temper works when verbose is TRUE and fn_plot is specified", {
                          x=x),
     NA
   )
+  sink()
 
 })

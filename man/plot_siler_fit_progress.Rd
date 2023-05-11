@@ -7,6 +7,8 @@
 plot_siler_fit_progress(b, x0, xvalues, xcounts)
 }
 \arguments{
+\item{x0}{The conditional starting age [default: 0].}
+
 \item{xvalues}{The x-values}
 
 \item{xcounts}{The number of observations for each element in xvalues}

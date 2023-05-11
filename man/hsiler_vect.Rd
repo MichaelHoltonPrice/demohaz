@@ -2,7 +2,7 @@
 % Please edit documentation in R/siler.R
 \name{hsiler_vect}
 \alias{hsiler_vect}
-\title{Vectorized calculation of the Siler hazard, lambda}
+\title{Vectorized calculation of the Siler hazard}
 \usage{
 hsiler_vect(x, b)
 }

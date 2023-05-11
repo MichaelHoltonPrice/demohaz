@@ -91,7 +91,5 @@ a = min(1,exp(-(eta_kp1-eta_k)*(1/T_k-1/T_kp1)))
 
 The swap is accepted with probability a, and otherwise rejected. The cycle of
 within-chain sampling followed by a single swap attempt is repeated num_cyc
-times. The minimum value of this procedure can be extracted from the output
-by calling the function par_temper_best.
-TODO: implement par_temper_best
+times.
 }

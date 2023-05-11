@@ -30,24 +30,33 @@ tranformed negative log-likelihood calculation.}
 
 \item{calc_hessian}{Whether to calculate the Hessian (default FALSE)}
 
-\item{lr}{The learning rate to use for fine tuning using gradient descent
+\item{num_cyc}{Number of cycles for tempering}
+
+\item{lr}{The learning rate for gradient descent
 (default: 1e-5)}
+
+\item{miniter}{The minimum number of iterations for gradient descent}
+
+\item{maxiter}{The maximum number of iterations for gradient descent}
 
 \item{verbose}{Whether to print out optimization information
 (default: FALSE)}
 
 \item{show_plot}{Whether to plot progress (default: FALSE)}
+
+\item{report_period}{How frequently to report information, which includes
+printing out information (if verbose is TRUE) and plotting the progress
+(if show_plot is TRUE). For tempering, this is with respect to cycles and
+for gradient descent this is with respect to iterations.}
 }
 \value{
-A list consisting of the fit (on the transformed variable bbar) and
-  maximum likelihood estimate of b. Optionally, the Hessian of the
-  log-likelihood is returned, which allows estimation of the standard errors
-  of the maximum likelihood estimate via the observed Fisher information
-  matrix.
+A list consisting of the best-fit parameter vector, b, a fit object
+  containing detailed information about the fit, and, optionally, the
+  Hessian of the negative log-likelihood.
 }
 \description{
-Do a maximum likelihood Siler fit given the input vector of ages, x. To
-allow unconstrained optimization to be used, optimization is done on the
-transformed variable bbar (see the description for the function
-fast_transformed_nllsiler).
+Do a maximum likelihood Siler fit given the input vector of ages, x. An
+initial stochastic optimization is done parallel tempering. The best
+parameter vector from the tempering is used to initialize a fine tuning
+using vanilla gradient descent.
 }
