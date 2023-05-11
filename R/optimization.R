@@ -11,7 +11,13 @@
 #' input, an initial parameter vector for the temepring, is required. All
 #' other inputs are optional. These optional inputs are control variables for
 #' the two optimizations and switches and hooks to provide information on the
-#' progress of the fit.
+#' progress of the fit. There is a potential issue with statistical
+#' identifiability stemming from the third, senescence term in the hazard.
+#' Pragmatically, this can be identified by checking whether b[5] is large,
+#' where 0.5 is a conservative cutoff to apply. If the best-fit parameter
+#' vector from the tempering has b[5] > 0.5, a warning is thrown suggesting
+#' that the user investigate further, and the fine tuning with gradient
+#' descent is skipped.
 #'
 #' @param obj_fun The objective function to minimize
 #' @param grad_fun The gradient function for the objective
@@ -73,6 +79,21 @@ temper_and_tune <- function(obj_fun,
                             ...) {
   num_param <- length(th0)
 
+  # Store the optional inputs in a list that will be put in the return list
+  # below
+  optional_inputs <- list(verbose=verbose,
+                          fn_plot=fn_plot,
+                          num_cyc=num_cyc,
+                          samps_per_cyc=samps_per_cyc,
+                          temp_vect = temp_vect,
+                          prop_scale_mat = prop_scale_mat,
+                          lr=lr,
+                          func_tol=func_tol,
+                          grad_tol=grad_tol,
+                          miniter=miniter,
+                          maxiter=maxiter,
+                          report_period=report_period)
+
   # For the scale of the proposal distribution, use 0.1 for the highest
   # temperature and 0.001 for the coldest temperature. This is multiplied by
   # each parameter value in b0 since they have different scales.
@@ -109,6 +130,23 @@ temper_and_tune <- function(obj_fun,
     print(temper$chains[[n]]$eta_best)
   }
 
+  # If th_temper[5] is greater than 0.5, there is likely a problem with
+  # statistical identifiability. Print a warning and do not do the gradient
+  # descent.
+  if (th_temper[5] > 0.5) {
+    warning(paste0('b[5] is greater than 0.5, which indicates a potential',
+                   ' issue with statistical identifiability. Not doing',
+                   ' gradient descent. The user should investigate this',
+                   ' further.'))
+    return(list(obj_fun=obj_fun,
+                grad_fun=grad_fun,
+                th0=th0,
+                optional_inputs=optional_inputs,
+                temper=temper,
+                th_temper=th_temper,
+                th=th_temper))
+  }
+
   descent <- gradient_descent(th_temper,
                               obj_fun,
                               grad_fun,
@@ -130,19 +168,6 @@ temper_and_tune <- function(obj_fun,
     print(th)
     print(descent$value)
   }
-
-  optional_inputs <- list(verbose=verbose,
-                          fn_plot=fn_plot,
-                          num_cyc=num_cyc,
-                          samps_per_cyc=samps_per_cyc,
-                          temp_vect = temp_vect,
-                          prop_scale_mat = prop_scale_mat,
-                          lr=lr,
-                          func_tol=func_tol,
-                          grad_tol=grad_tol,
-                          miniter=miniter,
-                          maxiter=maxiter,
-                          report_period=report_period)
 
   return(list(obj_fun=obj_fun,
               grad_fun=grad_fun,

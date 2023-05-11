@@ -90,5 +90,11 @@ function that calculates the gradient of the objective function. The third
 input, an initial parameter vector for the temepring, is required. All
 other inputs are optional. These optional inputs are control variables for
 the two optimizations and switches and hooks to provide information on the
-progress of the fit.
+progress of the fit. There is a potential issue with statistical
+identifiability stemming from the third, senescence term in the hazard.
+Pragmatically, this can be identified by checking whether b[5] is large,
+where 0.5 is a conservative cutoff to apply. If the best-fit parameter
+vector from the tempering has b[5] > 0.5, a warning is thrown suggesting
+that the user investigate further, and the fine tuning with gradient
+descent is skipped.
 }

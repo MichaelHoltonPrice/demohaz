@@ -35,3 +35,24 @@ test_that("gradient descent recovers correct parameters with rescale = TRUE", {
   expect_equal(as.numeric(result$par[1])*0.5, 5, tolerance = .01)
   expect_equal(as.numeric(result$par[2]), 2, tolerance = .01)
 })
+
+# A check on the statistical identifiability behavior could, conceptually, be
+# placed in either the unit tests or functional tests. I have chosen to place
+# it here. The following data yield b[5] equal to about 1, which fails the
+# check.
+test_that("Warning message when b[5] > 0.5", {
+  xvalues <- c(0.5, 1.5, 5.5, 10.5, 15.5, 20.5, 25.5, 30.5, 35.5, 40.5, 45.5,
+               50.5, 55.5, 60.5, 65.5, 70.5)
+  xcounts <- c(948, 759, 213, 394, 204, 284, 326, 202, 255, 120, 100, 169, 198,
+               279, 88, 883)
+  # Create x from these values and counts
+  x <- c()
+  for (n in 1:length(xvalues)) {
+    x <- c(x, rep(xvalues[n], xcounts[n]))
+  }
+  set.seed(1234)
+  expect_warning(output <- fit_siler(x), 
+                 "b[5] is greater than 0.5, which indicates a potential issue with statistical identifiability. Not doing gradient descent. The user should investigate this further.",
+                 fixed=TRUE)
+})
+
