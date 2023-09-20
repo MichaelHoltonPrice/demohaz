@@ -385,20 +385,20 @@ fit_siler <- function(x,
     fn_plot <- NULL
   }
 
-  fit <- temper_and_tune(fast_nllsiler,
-                         fast_gradnllsiler,
-                         b0,
-                         verbose=verbose,
-                         fn_plot=fn_plot,
-                         xvalues = xvalues,
-                         xcounts = xcounts,
-                         lr=lr,
-                         num_cyc=num_cyc,
-                         samps_per_cyc=20,
-                         miniter=miniter,
-                         maxiter=maxiter,
-                         report_period=report_period,
-                         x0 = x0)
+  fit <- temper_and_tune_siler(fast_nllsiler,
+                               fast_gradnllsiler,
+                               b0,
+                               verbose=verbose,
+                               fn_plot=fn_plot,
+                               xvalues = xvalues,
+                               xcounts = xcounts,
+                               lr=lr,
+                               num_cyc=num_cyc,
+                               samps_per_cyc=20,
+                               miniter=miniter,
+                               maxiter=maxiter,
+                               report_period=report_period,
+                               x0 = x0)
   
   b <- fit$th
   if (calc_hessian) {

@@ -1,6 +1,6 @@
 #' @title
 #' Solve a minimization problem using parallel tempering and gradient descent
-#' the optim
+#' to fit the Siler hazard
 #'
 #' @description
 #' This method does robust function minimization by doing an initial
@@ -61,22 +61,22 @@
 #'   vector from the gradient descent (th).
 #'
 #' @export
-temper_and_tune <- function(obj_fun,
-                            grad_fun,
-                            th0,
-                            verbose=FALSE,
-                            fn_plot=NULL,
-                            num_cyc=100,
-                            samps_per_cyc=20,
-                            temp_vect = 10^(rev(seq(-1,1,by=.25))),
-                            prop_scale_mat = NULL,
-                            lr=1e-5,
-                            func_tol=1e-6,
-                            grad_tol=1e-2,
-                            miniter=1,
-                            maxiter=1000,
-                            report_period=50,
-                            ...) {
+temper_and_tune_siler <- function(obj_fun,
+                                  grad_fun,
+                                  th0,
+                                  verbose=FALSE,
+                                  fn_plot=NULL,
+                                  num_cyc=100,
+                                  samps_per_cyc=20,
+                                  temp_vect = 10^(rev(seq(-1,1,by=.25))),
+                                  prop_scale_mat = NULL,
+                                  lr=1e-5,
+                                  func_tol=1e-6,
+                                  grad_tol=1e-2,
+                                  miniter=1,
+                                  maxiter=1000,
+                                  report_period=50,
+                                  ...) {
   num_param <- length(th0)
 
   # Store the optional inputs in a list that will be put in the return list
