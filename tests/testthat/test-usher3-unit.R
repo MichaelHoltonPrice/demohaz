@@ -164,10 +164,12 @@ test_that("usher3_nll returns a valid negative log-likelihood vector", {
 })
 
 # TODO: this must be tested with a parameter vector at a local minimum of the
-# negative log-likelihood
+# negative log-likelihood. This may require more values in the x vector.
 #test_that("usher3_errors returns viabl3e standard errors, z-scores, and p-values", {
 #  # Test case 1: Valid parameter values
-#  theta <- c(2e-2, 1.2, 0.175, 1.40, 0.368 * 0.01, 0.075 * 0.001, 0.917 * 0.1)
+#  #theta <- c(2e-2, 1.2, 0.175, 1.40, 0.368 * 0.01, 0.075 * 0.001, 0.917 * 0.1)
+#  theta <- c(1.319066e-02, 1.723116e+00, 1.758189e-02, 1.696364e+00,
+#             4.814728e-07, 3.810192e+01, 5.427843e-02)
 #  x <- c(10, 20, 30, 40, 50)
 #  ill <- c(0, 1, 0, 1, 0)
 #  errors <- usher3_errors(theta, x, ill)
@@ -214,5 +216,4 @@ test_that("temper_and_tune_usher3 returns viable results", {
   expect_false(anyNA(th), info = "'th' should not contain NA values")
   expect_false(anyNA(th_temper), 
                info = "'th_temper' should not contain NA values")
-  print(th)
 })
