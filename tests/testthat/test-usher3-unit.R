@@ -153,12 +153,12 @@ test_that("usher3_hessian returns a valid Hessian matrix", {
 })
 
 
-test_that("usher3_nll returns a valid negative log-likelihood vector", {
+test_that("nll_usher3_hessian_wrapper returns a valid negative log-likelihood vector", {
   # Test case 1: Valid parameter values
   paramVect <- c(2e-2, 1.2, 0.175, 1.40, 0.368 * 0.01, 0.075 * 0.001, 0.917 * 0.1)
   ageVect <- c(10, 20, 30, 40, 50)
   illVect <- c(0, 1, 0, 1, 0)
-  nll <- usher3_nll(paramVect, ageVect, illVect)
+  nll <- nll_usher3_hessian_wrapper(paramVect, ageVect, illVect)
   expect_true(is.numeric(nll) && length(nll) == 1)
   expect_false(anyNA(nll), info = "Negative log-likelihood vector should not contain NA.")
 })
@@ -183,13 +183,11 @@ test_that("usher3_nll returns a valid negative log-likelihood vector", {
 
 test_that("temper_and_tune_usher3 returns viable results", {
   # Test case: Valid inputs
-  obj_fun <- usher3_nll_transform
-  th0 <- c(2e-2, 1.2, 0.175, 1.40, 0.368 * 0.01, 0.075 * 0.001, 0.917 * 0.1)
   x <- c(10, 20, 30, 40, 50)
   ill <- c(0, 1, 0, 1, 0)
 
   # Get results from the function
-  results <- temper_and_tune_usher3(obj_fun, log(th0), x = x, ill = ill)
+  results <- temper_and_tune_usher3(x = x, ill = ill)
 
   # Check if the results are a list and contain specific names
   expect_true(is.list(results))

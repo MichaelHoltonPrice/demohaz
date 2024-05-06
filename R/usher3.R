@@ -134,8 +134,10 @@ nll_usher3 <- function(theta, x, ill, x0 = 0) {
 #'
 #' @export
 usher3_hessian <- function(theta, x, ill, x0 = 0) {
-  H <- numDeriv::hessian(usher3_nll, theta, method.args = list(eps = 1e-12),
-                         ageVect = x, illVect = ill, x0 = x0)
+  H <- numDeriv::hessian(nll_usher3_hessian_wrapper,
+                         theta, method.args = list(eps = 1e-12),
+                         ageVect = x,
+                         illVect = ill, x0 = x0)
   return(H)
 }
 
@@ -148,8 +150,7 @@ usher3_hessian <- function(theta, x, ill, x0 = 0) {
 #'
 #' @return The negative log-likelihood value
 #'
-#' @export
-usher3_nll <- function(paramVect, ageVect, illVect, x0 = 0) {
+nll_usher3_hessian_wrapper <- function(paramVect, ageVect, illVect, x0 = 0) {
   return(nll_usher3(paramVect, ageVect, illVect, x0))
 }
 
@@ -229,6 +230,7 @@ calc_filtration_density <- function(xcalc, x_mid, infant_prop, discrete = T) {
 #' sample_usher3(100, th, 0.01, 120)
 #'
 #' @export
+# TODO: add x0 as an optional input here
 sample_usher3 <- function(N, th, dx, xmax, x_mid = NA, infant_prop = NA,
                           area_tol = 1e-6) {
   # Set up the sampling grid and calculate the densities
@@ -336,17 +338,19 @@ sample_usher3 <- function(N, th, dx, xmax, x_mid = NA, infant_prop = NA,
   return(list(x = x, ill = ill, rho1 = rho1, rho2 = rho2))
 }
 
-usher3_nll_transform <- function(th_bar, x, ill) {
-  # A wrapper function with a transformation to ensure that parameters are
-# positive
+# TODO: accommodate x0
+nll_usher3_optim_wrapper <- function(th_bar, x, ill) {
+  # A wrapper function use as the objective function for
+  # temper_and_tune_usher3
   th <- exp(th_bar)
   return(nll_usher3(th, x, ill))
 }
 
 #' Temper and tune the Usher 3 model
 #'
-#' @param obj_fun The objective function
-#' @param th0 The initial parameter vector
+#' @param th0 The initial parameter vector with the ordering [k1, k2, b_siler]
+#'   where b_siler uses the demohaz parameterization of the Siler hazard (see
+#'   Siler documentation)
 #' @param verbose Whether to print verbose output [default: FALSE]
 #' @param fn_plot The function for plotting [default: NULL]
 #' @param num_cyc The number of cycles for tempering [default: 100]
@@ -364,14 +368,27 @@ usher3_nll_transform <- function(th_bar, x, ill) {
 #' @return A list containing the results of tempering and tuning
 #'
 #' @export
-temper_and_tune_usher3 <- function(obj_fun, th0, verbose = FALSE,
+temper_and_tune_usher3 <- function(th0 = c(1e-2,
+                                           1.0,
+                                           0.175,
+                                           1.40,
+                                           .368 * .01,
+                                           log(.917 * .1/(.075 * .001))/(.917 * .1),
+                                           .917 * .1),
+                                   verbose = FALSE,
                                    fn_plot = NULL, num_cyc = 100,
                                    samps_per_cyc = 20,
                                    temp_vect = 10^(rev(seq(-1, 1, by = 0.25))),
                                    prop_scale_mat = NULL, lr = 1e-5,
                                    func_tol = 1e-6, miniter = 1,
                                    maxiter = 1000, report_period = 50, ...) {
+  obj_fun <- nll_usher3_optim_wrapper
   num_param <- length(th0)
+  if (length(th0) != 7) {
+    stop('th0 should have length 7')
+  }
+
+  th0_bar <- log(th0)
 
   optional_inputs <- list(verbose = verbose, fn_plot = fn_plot,
                           num_cyc = num_cyc, samps_per_cyc = samps_per_cyc,
@@ -382,26 +399,31 @@ temper_and_tune_usher3 <- function(obj_fun, th0, verbose = FALSE,
   if (is.null(prop_scale_mat)) {
     just_scale <- t(replicate(num_param,
                               rev(seq(0.001, 0.1, len = length(temp_vect)))))
-    just_param <- replicate(length(temp_vect), th0)
+    just_param <- replicate(length(temp_vect), th0_bar)
     prop_scale_mat <- just_scale * just_param
   }
   if (verbose) {
     print('Starting parameter vector th0 = ')
     print(th0)
+    print('Starting parameter vector th0_bar = ')
+    print(th0_bar)
     print('Starting objective function value eta = ')
-    print(obj_fun(th0, ...))
+    print(obj_fun(th0_bar, ...))
   }
-  temper <- par_temper(th0, obj_fun, temp_vect = temp_vect,
+  temper <- par_temper(th0_bar, obj_fun, temp_vect = temp_vect,
                        prop_scale = prop_scale_mat, num_cyc = num_cyc,
                        samps_per_cyc = samps_per_cyc, fn_plot = fn_plot,
                        verbose = verbose, report_period = report_period, ...)
 
   n <- which.min(unlist(lapply(temper$chains, function(x) {x$eta_best})))
-  th_temper <- temper$chains[[n]]$theta_best
+  th_bar_temper <- temper$chains[[n]]$theta_best
+  th_temper <- exp(th_bar_temper)
 
   if (verbose) {
-    print('Best parameter vector from initial tempering:')
+    print('Best parameter vector from initial tempering (th):')
     print(th_temper)
+    print('Best parameter vector from initial tempering (th_bar):')
+    print(th_bar_temper)
     print('The corresponding best value of the objective function:')
     print(temper$chains[[n]]$eta_best)
   }

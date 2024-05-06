@@ -5,8 +5,8 @@
 \title{Temper and tune the Usher 3 model}
 \usage{
 temper_and_tune_usher3(
-  obj_fun,
-  th0,
+  th0 = c(0.01, 1, 0.175, 1.4, 0.368 * 0.01, log(0.917 * 0.1/(0.075 * 0.001))/(0.917 *
+    0.1), 0.917 * 0.1),
   verbose = FALSE,
   fn_plot = NULL,
   num_cyc = 100,
@@ -22,9 +22,9 @@ temper_and_tune_usher3(
 )
 }
 \arguments{
-\item{obj_fun}{The objective function}
-
-\item{th0}{The initial parameter vector}
+\item{th0}{The initial parameter vector with the ordering [k1, k2, b_siler]
+where b_siler uses the demohaz parameterization of the Siler hazard (see
+Siler documentation)}
 
 \item{verbose}{Whether to print verbose output [default: FALSE]}
 
