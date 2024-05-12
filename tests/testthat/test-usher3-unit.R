@@ -2,7 +2,13 @@ library(testthat)
 library(demohaz)
 
 # Create a baseline parameter vector used across tests
-th0 <- c(2e-2, 1.2, 0.175, 1.40, 0.368 * 0.01, 0.075 * 0.001, 0.917 * 0.1)
+b0 = c(.175,
+       1.40,
+       .368 * .01,
+       log(.917 * .1/(.075 * .001))/(.917 * .1),
+       .917 * .1)
+
+th0 <- c(2e-2, 1.2, b0)
 
 test_that("usher3_rho1 returns correct density values", {
   # Test cases with various age inputs
@@ -87,10 +93,9 @@ test_that("sample_usher3 generates samples correctly", {
 
   # Test case 1: Basic sampling without age filtration
   N <- 50
-  th <- c(2e-2, 1.2, 0.175, 1.40, 0.368, 0.01, 0.075, 0.001, 0.917, 0.1)
   dx <- 0.001
   xmax <- 120
-  samples1 <- sample_usher3(N, th, dx, xmax)
+  samples1 <- sample_usher3(N, th0, dx, xmax)
   expect_equal(length(samples1$x), N)
   expect_equal(length(samples1$ill), N)
   expect_true(all(samples1$x >= 0 & samples1$x <= xmax))
@@ -99,7 +104,7 @@ test_that("sample_usher3 generates samples correctly", {
   # Test case 2: Sampling with age filtration
   x_mid <- 50
   infant_prop <- 0.1
-  samples2 <- sample_usher3(N, th, dx, xmax, x_mid, infant_prop)
+  samples2 <- sample_usher3(N, th0, dx, xmax, x_mid, infant_prop)
   expect_equal(length(samples2$x), N)
   expect_equal(length(samples2$ill), N)
   expect_true(all(samples2$x >= 0 & samples2$x <= 2 * x_mid))
@@ -107,7 +112,7 @@ test_that("sample_usher3 generates samples correctly", {
   
   # Test case 3: Sampling with a smaller number of samples
   N_small <- 10
-  samples3 <- sample_usher3(N_small, th, dx, xmax)
+  samples3 <- sample_usher3(N_small, th0, dx, xmax)
   expect_equal(length(samples3$x), N_small)
   expect_equal(length(samples3$ill), N_small)
   expect_true(all(samples3$x >= 0 & samples3$x <= xmax))
@@ -116,10 +121,9 @@ test_that("sample_usher3 generates samples correctly", {
 
 test_that("nll_usher3 returns the correct negative log-likelihood value", {
   # Test case 1: Valid parameter values
-  theta <- c(0.1, 1.5, 0.2, 1.3, 0.4, 0.01, 0.1)
   x <- c(10, 20, 30, 40, 50)
   ill <- c(0, 1, 0, 1, 0)
-  nll <- nll_usher3(theta, x, ill)
+  nll <- nll_usher3(th0, x, ill)
   expect_true(is.numeric(nll) && length(nll) == 1)
 
   # Test case 2: Invalid parameter values
@@ -129,8 +133,6 @@ test_that("nll_usher3 returns the correct negative log-likelihood value", {
 
 test_that("usher3_hessian returns a valid Hessian matrix", {
   # Using a more realistic vector for the parameters
-  th0 <- c(2e-2, 1.2, 0.175, 1.40, 0.368 * 0.01, 0.075 * 0.001, 0.917 * 0.1)
-  
   # Example input data
   x <- c(10, 20, 30, 40, 50)
   ill <- c(0, 1, 0, 1, 0)
@@ -155,10 +157,9 @@ test_that("usher3_hessian returns a valid Hessian matrix", {
 
 test_that("nll_usher3_hessian_wrapper returns a valid negative log-likelihood vector", {
   # Test case 1: Valid parameter values
-  paramVect <- c(2e-2, 1.2, 0.175, 1.40, 0.368 * 0.01, 0.075 * 0.001, 0.917 * 0.1)
   ageVect <- c(10, 20, 30, 40, 50)
   illVect <- c(0, 1, 0, 1, 0)
-  nll <- nll_usher3_hessian_wrapper(paramVect, ageVect, illVect)
+  nll <- nll_usher3_hessian_wrapper(th0, ageVect, illVect)
   expect_true(is.numeric(nll) && length(nll) == 1)
   expect_false(anyNA(nll), info = "Negative log-likelihood vector should not contain NA.")
 })
@@ -167,6 +168,7 @@ test_that("nll_usher3_hessian_wrapper returns a valid negative log-likelihood ve
 # negative log-likelihood. This may require more values in the x vector.
 #test_that("usher3_errors returns viabl3e standard errors, z-scores, and p-values", {
 #  # Test case 1: Valid parameter values
+#  TODO: use th0 here
 #  #theta <- c(2e-2, 1.2, 0.175, 1.40, 0.368 * 0.01, 0.075 * 0.001, 0.917 * 0.1)
 #  theta <- c(1.319066e-02, 1.723116e+00, 1.758189e-02, 1.696364e+00,
 #             4.814728e-07, 3.810192e+01, 5.427843e-02)
