@@ -13,8 +13,8 @@ devtools package. If necessary, install devtools and testthat (testthat is
 only needed if you want to run the tests as described below).
 
 ```R
-install.packages(devtools)
-install.packages(testthat)
+install.packages('devtools')
+install.packages('testthat')
 ```
 
 ```R
