@@ -20,6 +20,7 @@ install.packages('testthat')
 ```R
 devtools::install_github('MichaelHoltonPrice/demohaz')
 ```
+Load new and other required libraries prior to running the script below.
 
 # Siler hazard (quickstart)
 demohaz uses the following parameterization of the Siler hazard:
