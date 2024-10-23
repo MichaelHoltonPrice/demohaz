@@ -119,7 +119,7 @@ test_that("sample_usher3 generates samples correctly", {
   expect_true(all(samples3$ill %in% c(TRUE, FALSE)))
 })
 
-test_that("nll_usher3 returns the correct negative log-likelihood value", {
+test_that("nll_usher3 returns viable negative log-likelihood values", {
   # Test case 1: Valid parameter values
   x <- c(10, 20, 30, 40, 50)
   ill <- c(0, 1, 0, 1, 0)
@@ -129,6 +129,12 @@ test_that("nll_usher3 returns the correct negative log-likelihood value", {
   # Test case 2: Invalid parameter values
   theta_invalid <- c(-0.1, 1.5, 0.2, 1.3, 0.4, 0.01, 0.1)
   expect_equal(nll_usher3(theta_invalid, x, ill), Inf)
+
+  # Test case 3: ill vector with NA values
+  ill_with_na <- c(0, NA, 0, 1, NA)
+  nll_with_na <- nll_usher3(th0, x, ill_with_na)
+  expect_true(is.numeric(nll_with_na) && length(nll_with_na) == 1)
+  expect_true(is.finite(nll_with_na))
 })
 
 test_that("usher3_hessian returns a valid Hessian matrix", {

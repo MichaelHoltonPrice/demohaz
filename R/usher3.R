@@ -109,6 +109,21 @@ nll_usher3 <- function(theta, x, ill, x0 = 0) {
   }
   b_siler <- theta[3:7]
 
+  # If the ill state is not known (NA) then we can still use the datapoint
+  # by using rho1 + rho2 for the likelihood.
+  ind_na <- is.na(ill)
+  x_na <- x[ind_na]
+  rho2_na_ill <- usher3_rho2(x_na, k1, k2, b_siler, x0)
+  if (any(is.na(rho2_na_ill))) {
+    return(Inf)
+  }
+  rho1_na_wll <- usher3_rho1(x_na, k1, b_siler, x0)
+  # rho_na contributes to the  likelihood below
+  rho_na <- rho2_na_ill + rho1_na_wll
+
+  # Subet x with the non-missing values calculate rho1 and rho2
+  x <- x[!ind_na]
+  ill <- ill[!ind_na]
   x_wll <- x[ill == 0]
   x_ill <- x[ill == 1]
 
@@ -119,7 +134,8 @@ nll_usher3 <- function(theta, x, ill, x0 = 0) {
 
   rho1_wll <- usher3_rho1(x_wll, k1, b_siler, x0)
 
-  ll <- sum(log(rho1_wll)) + sum(log(rho2_ill))
+  # Calculate and return the negative log-likelihood
+  ll <- sum(log(rho_na)) + sum(log(rho1_wll)) + sum(log(rho2_ill))
   return(-ll)
 }
 
