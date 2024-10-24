@@ -357,12 +357,12 @@ sample_usher3 <- function(N, th, dx, xmax, x_mid = NA, infant_prop = NA,
 # TODO: accommodate x0
 nll_usher3_optim_wrapper <- function(th_bar, x, ill) {
   # A wrapper function use as the objective function for
-  # temper_and_tune_usher3
+  # temper_usher3
   th <- exp(th_bar)
   return(nll_usher3(th, x, ill))
 }
 
-#' Temper and tune the Usher 3 model
+#' Use parallel tempering to fit the usher3 model.
 #'
 #' @param th0 The initial parameter vector with the ordering [k1, k2, b_siler]
 #'   where b_siler uses the demohaz parameterization of the Siler hazard (see
@@ -384,20 +384,20 @@ nll_usher3_optim_wrapper <- function(th_bar, x, ill) {
 #' @return A list containing the results of tempering and tuning
 #'
 #' @export
-temper_and_tune_usher3 <- function(th0 = c(1e-2,
-                                           1.0,
-                                           0.175,
-                                           1.40,
-                                           .368 * .01,
-                                           log(.917 * .1/(.075 * .001))/(.917 * .1),
-                                           .917 * .1),
-                                   verbose = FALSE,
-                                   fn_plot = NULL, num_cyc = 100,
-                                   samps_per_cyc = 20,
-                                   temp_vect = 10^(rev(seq(-1, 1, by = 0.25))),
-                                   prop_scale_mat = NULL, lr = 1e-5,
-                                   func_tol = 1e-6, miniter = 1,
-                                   maxiter = 1000, report_period = 50, ...) {
+temper_usher3 <- function(th0 = c(1e-2,
+                                  1.0,
+                                  0.175,
+                                  1.40,
+                                  .368 * .01,
+                                  log(.917 * .1/(.075 * .001))/(.917 * .1),
+                                  .917 * .1),
+                          verbose = FALSE,
+                          fn_plot = NULL, num_cyc = 100,
+                          samps_per_cyc = 20,
+                          temp_vect = 10^(rev(seq(-1, 1, by = 0.25))),
+                          prop_scale_mat = NULL, lr = 1e-5,
+                          func_tol = 1e-6, miniter = 1,
+                          maxiter = 1000, report_period = 50, ...) {
   obj_fun <- nll_usher3_optim_wrapper
   num_param <- length(th0)
   if (length(th0) != 7) {

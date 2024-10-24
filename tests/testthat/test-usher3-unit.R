@@ -189,13 +189,13 @@ test_that("nll_usher3_hessian_wrapper returns a valid negative log-likelihood ve
 #  expect_true(all(c("Estimate", "StandErr", "z", "pval", "against", "sideAdj") %in% names(errors)))
 #})
 
-test_that("temper_and_tune_usher3 returns viable results", {
+test_that("temper_usher3 returns viable results", {
   # Test case: Valid inputs
   x <- c(10, 20, 30, 40, 50)
   ill <- c(0, 1, 0, 1, 0)
 
   # Get results from the function
-  results <- temper_and_tune_usher3(x = x, ill = ill)
+  results <- temper_usher3(x = x, ill = ill)
 
   # Check if the results are a list and contain specific names
   expect_true(is.list(results))
