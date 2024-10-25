@@ -2,14 +2,18 @@
 % Please edit documentation in R/usher3.R
 \name{nll_usher3}
 \alias{nll_usher3}
-\title{Calculate the negative log-likelihood for the Usher 3 illness-death model}
+\title{Calculate the negative log-likelihood for the Usher 3 illness-death model.
+This method also supports Gompertz-Makeham mortality, for which the infant
+mortality term is zero; this is accomplished by detecting if the input
+parameter vector, theta, has length 5, which implies no infant mortality
+term.}
 \usage{
 nll_usher3(theta, x, ill, x0 = 0)
 }
 \arguments{
 \item{theta}{The parameter vector for the Usher illness-death model with
-ordering [k1, k2, mort]. The mortality parameter vector, mort, is
-[b1, b2, b3, b4, b5].}
+ordering [k1, k2, mort]. The mortality parameter vector is
+[b1, b2, b3, b4, b5], or [b3, b4, b5] for Gompertz-Makeham mortality.}
 
 \item{x}{The vector of ages-at-death}
 
@@ -21,5 +25,9 @@ ordering [k1, k2, mort]. The mortality parameter vector, mort, is
 The negative log-likelihood value
 }
 \description{
-Calculate the negative log-likelihood for the Usher 3 illness-death model
+Calculate the negative log-likelihood for the Usher 3 illness-death model.
+This method also supports Gompertz-Makeham mortality, for which the infant
+mortality term is zero; this is accomplished by detecting if the input
+parameter vector, theta, has length 5, which implies no infant mortality
+term.
 }

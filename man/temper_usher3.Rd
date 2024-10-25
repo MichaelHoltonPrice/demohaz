@@ -18,6 +18,7 @@ temper_usher3(
   miniter = 1,
   maxiter = 1000,
   report_period = 50,
+  use_gompertz = FALSE,
   ...
 )
 }
@@ -49,11 +50,17 @@ Siler documentation)}
 
 \item{report_period}{The reporting period for verbose output [default: 50]}
 
+\item{use_gompertz}{Whether to use Gompert-Makeham mortality [default: FAlSE]}
+
 \item{...}{Additional arguments passed to obj_fun}
 }
 \value{
 A list containing the results of tempering and tuning
 }
 \description{
-Use parallel tempering to fit the usher3 model.
+If the flag use_gompertz is True, then the infant mortality hazard is
+assumed to be zero and the parameter vector, th0, should only have five
+from 7 to 5 terms if use_gompertz is TRUE. If the scaling matrix,
+prop_scale_mat, is specified when use_gommpertz is True its dimensions must
+match the reduced length of the parameter vector.
 }

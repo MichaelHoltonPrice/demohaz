@@ -223,3 +223,98 @@ test_that("temper_usher3 returns viable results", {
   expect_false(anyNA(th_temper), 
                info = "'th_temper' should not contain NA values")
 })
+
+# Reduced parameter vector for Gompertz-Makeham mortality (length 5)
+b0_gompertz <- c(0.368 * 0.01,
+                 log(0.917 * 0.1 / (0.075 * 0.001)) / (0.917 * 0.1),
+                 0.917 * 0.1)
+th0_gompertz <- c(2e-2, 1.2, b0_gompertz)  # Length 5
+x <- c(10, 20, 30, 40, 50)
+ill <- c(0, 1, 0, 1, 0)
+
+# Full parameter vectors
+b0_full <- c(0.175,
+             1.40,
+             0.368 * 0.01,
+             log(0.917 * 0.1 / (0.075 * 0.001)) / (0.917 * 0.1),
+             0.917 * 0.1)
+th0_full <- c(2e-2, 1.2, b0_full)  # Length 7
+
+test_that("nll_usher3 handles Gompertz-Makeham mortality correctly", {
+  nll_gompertz <- nll_usher3(th0_gompertz, x, ill)
+  expect_true(is.numeric(nll_gompertz) && length(nll_gompertz) == 1)
+  expect_false(is.infinite(nll_gompertz))
+
+  theta_invalid <- c(-0.1, 1.5, 0.2, 1.3, 0.4)
+  expect_equal(nll_usher3(theta_invalid, x, ill), Inf)
+
+  ill_with_na <- c(0, NA, 1, NA, 0)
+  nll_with_na <- nll_usher3(th0_gompertz, x, ill_with_na)
+  expect_true(is.numeric(nll_with_na) && length(nll_with_na) == 1)
+  expect_true(is.finite(nll_with_na))
+})
+
+test_that("temper_usher3 handles use_gompertz = TRUE correctly", {
+  results_gompertz <- temper_usher3(th0 = th0_gompertz, x = x,
+                                    ill = ill, use_gompertz = TRUE)
+  expect_true(is.list(results_gompertz))
+  expect_true(all(c("obj_fun", "th0", "optional_inputs", "temper",
+                    "th_temper", "th") %in% names(results_gompertz)))
+
+  th_temper <- results_gompertz$th_temper
+  th <- results_gompertz$th
+  expect_equal(length(th), 5, 
+               info = "'th' should have length 5 when use_gompertz = TRUE")
+  expect_false(all(th == th0_gompertz))
+  expect_false(all(th_temper == th0_gompertz))
+  expect_true(all(th == th_temper))
+  expect_false(anyNA(th))
+  expect_false(anyNA(th_temper))
+})
+
+test_that("temper_usher3 adjusts parameter vector length correctly", {
+  results_adjusted <- temper_usher3(th0 = th0_full, x = x, ill = ill,
+                                    use_gompertz = TRUE)
+  adjusted_th0 <- results_adjusted$th0
+  expect_equal(length(adjusted_th0), 5)
+  expected_th0_adjusted <- th0_full[c(1, 2, 5, 6, 7)]
+  expect_equal(adjusted_th0, expected_th0_adjusted, tolerance = 1e-8)
+})
+
+test_that("nll_usher3 checks negative parameters with varying lengths", {
+  theta_negative <- c(0.02, 1.2, -0.01, 0.05, 0.1)
+  expect_equal(nll_usher3(theta_negative, x, ill), Inf)
+
+  theta_negative_full <- c(0.02, 1.2, 0.1, 0.2, -0.01, 0.05, 0.1)
+  expect_equal(nll_usher3(theta_negative_full, x, ill), Inf)
+})
+
+test_that("temper_usher3 errors with incorrect th0 length", {
+  th0_incorrect <- c(0.02, 1.2, 0.1, 0.2, 0.3, 0.4)
+  expect_error(temper_usher3(th0 = th0_incorrect, x = x, ill = ill,
+                             use_gompertz = TRUE),
+               "th0 should have length 5 or 7 if use_gompertz is TRUE")
+})
+
+test_that("temper_usher3 defaults correctly when use_gompertz = FALSE", {
+  expect_error(temper_usher3(th0 = th0_gompertz, x = x, ill = ill,
+                             use_gompertz = FALSE),
+               "th0 should have length 7")
+})
+
+test_that("nll_usher3 handles both full and reduced parameter vectors", {
+  nll_full <- nll_usher3(th0_full, x, ill)
+  expect_true(is.numeric(nll_full) && length(nll_full) == 1)
+  expect_false(is.infinite(nll_full))
+
+  nll_reduced <- nll_usher3(th0_gompertz, x, ill)
+  expect_true(is.numeric(nll_reduced) && length(nll_reduced) == 1)
+  expect_false(is.infinite(nll_reduced))
+})
+
+test_that("nll_usher3 handles x0 parameter correctly", {
+  x0 <- 5
+  nll_x0 <- nll_usher3(th0_gompertz, x, ill, x0 = x0)
+  expect_true(is.numeric(nll_x0) && length(nll_x0) == 1)
+  expect_false(is.infinite(nll_x0))
+})

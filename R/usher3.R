@@ -81,11 +81,15 @@ usher3_integrand <- function(y, k1, k2, b_siler) {
   return(S12_0_y * (S13_0_y)^(1 - k2))
 }
 
-#' Calculate the negative log-likelihood for the Usher 3 illness-death model
+#' Calculate the negative log-likelihood for the Usher 3 illness-death model.
+#' This method also supports Gompertz-Makeham mortality, for which the infant
+#' mortality term is zero; this is accomplished by detecting if the input
+#' parameter vector, theta, has length 5, which implies no infant mortality
+#' term.
 #'
 #' @param theta The parameter vector for the Usher illness-death model with
-#'   ordering [k1, k2, mort]. The mortality parameter vector, mort, is
-#'   [b1, b2, b3, b4, b5].
+#'   ordering [k1, k2, mort]. The mortality parameter vector is
+#'   [b1, b2, b3, b4, b5], or [b3, b4, b5] for Gompertz-Makeham mortality.
 #' @param x The vector of ages-at-death
 #' @param ill The vector of illness indicators, which can have NA entries
 #' @param x0 Conditional starting age [default: 0]
@@ -104,10 +108,18 @@ nll_usher3 <- function(theta, x, ill, x0 = 0) {
     return(Inf)
   }
 
-  if (any(theta[3:7] < 0)) {
+  if (length(theta) == 5) {
+    # Then assume Gompertz-Makeham mortality and add an infant mortality term
+    # that equals zero
+    b_siler <- c(0, 1, theta[3:5])
+  } else {
+    # Then we do have an infant mortality term
+    b_siler <- theta[3:7]
+  }
+
+  if (any(b_siler < 0)) {
     return(Inf)
   }
-  b_siler <- theta[3:7]
 
   # If the ill state is not known (NA) then we can still use the datapoint
   # by using rho1 + rho2 for the likelihood.
@@ -364,6 +376,13 @@ nll_usher3_optim_wrapper <- function(th_bar, x, ill) {
 
 #' Use parallel tempering to fit the usher3 model.
 #'
+#' If the flag use_gompertz is True, then the infant mortality hazard is
+#' assumed to be zero and the parameter vector, th0, should only have five
+# terms (k1, k2, and three mortality parameters). If necessary, th0 is subset
+#' from 7 to 5 terms if use_gompertz is TRUE. If the scaling matrix,
+#' prop_scale_mat, is specified when use_gommpertz is True its dimensions must
+#' match the reduced length of the parameter vector.
+#'
 #' @param th0 The initial parameter vector with the ordering [k1, k2, b_siler]
 #'   where b_siler uses the demohaz parameterization of the Siler hazard (see
 #'   Siler documentation)
@@ -379,6 +398,7 @@ nll_usher3_optim_wrapper <- function(th_bar, x, ill) {
 #' @param miniter The minimum number of iterations [default: 1]
 #' @param maxiter The maximum number of iterations [default: 1000]
 #' @param report_period The reporting period for verbose output [default: 50]
+#' @param use_gompertz Whether to use Gompert-Makeham mortality [default: FAlSE]
 #' @param ... Additional arguments passed to obj_fun
 #'
 #' @return A list containing the results of tempering and tuning
@@ -397,12 +417,24 @@ temper_usher3 <- function(th0 = c(1e-2,
                           temp_vect = 10^(rev(seq(-1, 1, by = 0.25))),
                           prop_scale_mat = NULL, lr = 1e-5,
                           func_tol = 1e-6, miniter = 1,
-                          maxiter = 1000, report_period = 50, ...) {
+                          maxiter = 1000, report_period = 50,
+                          use_gompertz=FALSE, ...) {
   obj_fun <- nll_usher3_optim_wrapper
-  num_param <- length(th0)
-  if (length(th0) != 7) {
-    stop('th0 should have length 7')
+  if (!use_gompertz) {
+    if (length(th0) != 7) {
+      stop('th0 should have length 7')
+    }
+  } else {
+    if (!(length(th0) %in% c(5,7))) {
+      stop('th0 should have length 5 or 7 if use_gompertz is TRUE')
+    }
+    if (length(th0) == 7) {
+      # If necessary, remove the infant mortality term from th0
+      th0 <- th0[c(1,2,5,6,7)]
+    }
   }
+
+  num_param <- length(th0)
 
   th0_bar <- log(th0)
 
