@@ -317,3 +317,174 @@ test_that("usher3_rho2 with x_cutoff produces valid densities", {
   expect_true(all(rho2 > 0))
 })
 
+# Tests for nll_usher3 with x_cutoff
+
+test_that("nll_usher3 with x_cutoff = Inf matches original behavior", {
+  x <- c(10, 20, 30, 40, 50)
+  ill <- c(0, 1, 0, 1, 0)
+  x0 <- 0
+  
+  # Calculate with x_cutoff = Inf
+  nll_inf <- nll_usher3(th0, x, ill, x0, x_cutoff = Inf)
+  
+  # Should be finite and positive
+  expect_true(is.finite(nll_inf))
+  expect_true(nll_inf > 0)
+  
+  # Compare with manually calculated likelihood components
+  k1 <- th0[1]
+  k2 <- th0[2]
+  b_siler <- th0[3:7]
+  
+  x_wll <- x[ill == 0]
+  x_ill <- x[ill == 1]
+  
+  rho1_wll <- usher3_rho1(x_wll, k1, b_siler, x0, x_cutoff = Inf)
+  rho2_ill <- usher3_rho2(x_ill, k1, k2, b_siler, x0, x_cutoff = Inf)
+  
+  ll_expected <- sum(log(rho1_wll)) + sum(log(rho2_ill))
+  nll_expected <- -ll_expected
+  
+  expect_equal(nll_inf, nll_expected, tolerance = 1e-8)
+})
+
+test_that("nll_usher3 with x_cutoff produces valid likelihood", {
+  x <- c(10, 20, 30, 40, 50)
+  ill <- c(0, 1, 0, 1, 0)
+  x0 <- 0
+  x_cutoff <- 6
+  
+  # Calculate with finite x_cutoff
+  nll_cutoff <- nll_usher3(th0, x, ill, x0, x_cutoff)
+  
+  # Should be finite and positive
+  expect_true(is.finite(nll_cutoff))
+  expect_true(nll_cutoff > 0)
+  
+  # Manual verification
+  k1 <- th0[1]
+  k2 <- th0[2]
+  b_siler <- th0[3:7]
+  
+  x_wll <- x[ill == 0]
+  x_ill <- x[ill == 1]
+  
+  rho1_wll <- usher3_rho1(x_wll, k1, b_siler, x0, x_cutoff)
+  rho2_ill <- usher3_rho2(x_ill, k1, k2, b_siler, x0, x_cutoff)
+  
+  ll_expected <- sum(log(rho1_wll)) + sum(log(rho2_ill))
+  nll_expected <- -ll_expected
+  
+  expect_equal(nll_cutoff, nll_expected, tolerance = 1e-8)
+})
+
+test_that("nll_usher3 with x_cutoff handles NA illness indicators", {
+  x <- c(10, 20, 30, 40, 50)
+  ill <- c(0, NA, 0, 1, NA)
+  x0 <- 0
+  x_cutoff <- 6
+  
+  # Should handle NA values correctly
+  nll_cutoff <- nll_usher3(th0, x, ill, x0, x_cutoff)
+  
+  expect_true(is.finite(nll_cutoff))
+  expect_true(nll_cutoff > 0)
+})
+
+test_that("nll_usher3 with x_cutoff rejects negative parameters", {
+  x <- c(10, 20, 30, 40, 50)
+  ill <- c(0, 1, 0, 1, 0)
+  x0 <- 0
+  x_cutoff <- 6
+  
+  # Negative k1
+  theta_neg_k1 <- th0
+  theta_neg_k1[1] <- -0.01
+  expect_equal(nll_usher3(theta_neg_k1, x, ill, x0, x_cutoff), Inf)
+  
+  # Negative k2
+  theta_neg_k2 <- th0
+  theta_neg_k2[2] <- -0.5
+  expect_equal(nll_usher3(theta_neg_k2, x, ill, x0, x_cutoff), Inf)
+  
+  # Negative Siler parameter
+  theta_neg_siler <- th0
+  theta_neg_siler[3] <- -0.1
+  expect_equal(nll_usher3(theta_neg_siler, x, ill, x0, x_cutoff), Inf)
+})
+
+test_that("nll_usher3 with x_cutoff supports Gompertz-Makeham", {
+  x <- c(10, 20, 30, 40, 50)
+  ill <- c(0, 1, 0, 1, 0)
+  x0 <- 0
+  x_cutoff <- 6
+  
+  # Use 5-parameter version (Gompertz-Makeham)
+  th0_gompertz <- c(2e-2, 1.2, 0.368 * 0.01,
+                    log(0.917 * 0.1 / (0.075 * 0.001)) / (0.917 * 0.1),
+                    0.917 * 0.1)
+  
+  nll_gm <- nll_usher3(th0_gompertz, x, ill, x0, x_cutoff)
+  
+  expect_true(is.finite(nll_gm))
+  expect_true(nll_gm > 0)
+})
+
+test_that("nll_usher3 likelihood changes with x_cutoff", {
+  x <- c(10, 20, 30, 40, 50)
+  ill <- c(0, 1, 0, 1, 0)
+  x0 <- 0
+  
+  # Calculate likelihoods with different cutoffs
+  nll_inf <- nll_usher3(th0, x, ill, x0, x_cutoff = Inf)
+  nll_6 <- nll_usher3(th0, x, ill, x0, x_cutoff = 6)
+  nll_12 <- nll_usher3(th0, x, ill, x0, x_cutoff = 12)
+  
+  # All should be finite and positive
+  expect_true(all(is.finite(c(nll_inf, nll_6, nll_12))))
+  expect_true(all(c(nll_inf, nll_6, nll_12) > 0))
+  
+  # They should be different (different models)
+  expect_false(isTRUE(all.equal(nll_inf, nll_6)))
+  expect_false(isTRUE(all.equal(nll_inf, nll_12)))
+  expect_false(isTRUE(all.equal(nll_6, nll_12)))
+})
+
+test_that("usher3_hessian with x_cutoff produces valid Hessian", {
+  x <- c(10, 20, 30, 40, 50)
+  ill <- c(0, 1, 0, 1, 0)
+  x0 <- 0
+  x_cutoff <- 6
+  
+  H <- usher3_hessian(th0, x, ill, x0, x_cutoff)
+  
+  # Should be a matrix
+  expect_true(is.matrix(H))
+  
+  # Should have correct dimensions
+  expect_equal(dim(H), c(7, 7))
+  
+  # Should not contain NA values
+  expect_false(anyNA(H))
+})
+
+test_that("usher3_errors with x_cutoff runs without error", {
+  x <- c(10, 20, 30, 40, 50, 15, 25, 35, 45)
+  ill <- c(0, 1, 0, 1, 0, 1, 0, 1, 0)
+  x0 <- 0
+  x_cutoff <- 6
+  
+  # The main test is that this runs without throwing an error
+  # Note: With small sample sizes, the Hessian may be near-singular
+  # leading to numerical issues in error estimation
+  expect_error(
+    errors <- usher3_errors(th0, x, ill, x0, x_cutoff),
+    NA  # NA means we expect NO error
+  )
+  
+  # If it runs, it should return a data frame with the right structure
+  errors <- usher3_errors(th0, x, ill, x0, x_cutoff)
+  expect_true(is.data.frame(errors))
+  expect_equal(nrow(errors), 7)
+  expect_true(all(c("Estimate", "StandErr", "z", "pval", "against", "sideAdj") %in% names(errors)))
+})

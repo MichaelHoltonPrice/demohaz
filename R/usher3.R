@@ -175,11 +175,14 @@ usher3_integrand <- function(y, k1, k2, b_siler, x_cutoff = Inf) {
 #' @param x The vector of ages-at-death
 #' @param ill The vector of illness indicators, which can have NA entries
 #' @param x0 Conditional starting age [default: 0]
+#' @param x_cutoff The age at which the well-to-ill transition hazard becomes
+#'   zero [default: Inf]. When x_cutoff = Inf, this reduces to the standard
+#'   constant hazard model.
 #'
 #' @return The negative log-likelihood value
 #'
 #' @export
-nll_usher3 <- function(theta, x, ill, x0 = 0) {
+nll_usher3 <- function(theta, x, ill, x0 = 0, x_cutoff = Inf) {
   k1 <- theta[1]
   if (k1 < 0) {
     return(Inf)
@@ -207,11 +210,11 @@ nll_usher3 <- function(theta, x, ill, x0 = 0) {
   # by using rho1 + rho2 for the likelihood.
   ind_na <- is.na(ill)
   x_na <- x[ind_na]
-  rho2_na_ill <- usher3_rho2(x_na, k1, k2, b_siler, x0)
+  rho2_na_ill <- usher3_rho2(x_na, k1, k2, b_siler, x0, x_cutoff)
   if (any(is.na(rho2_na_ill))) {
     return(Inf)
   }
-  rho1_na_wll <- usher3_rho1(x_na, k1, b_siler, x0)
+  rho1_na_wll <- usher3_rho1(x_na, k1, b_siler, x0, x_cutoff)
   # rho_na contributes to the  likelihood below
   rho_na <- rho2_na_ill + rho1_na_wll
 
@@ -221,12 +224,12 @@ nll_usher3 <- function(theta, x, ill, x0 = 0) {
   x_wll <- x[ill == 0]
   x_ill <- x[ill == 1]
 
-  rho2_ill <- usher3_rho2(x_ill, k1, k2, b_siler, x0)
+  rho2_ill <- usher3_rho2(x_ill, k1, k2, b_siler, x0, x_cutoff)
   if (any(is.na(rho2_ill))) {
     return(Inf)
   }
 
-  rho1_wll <- usher3_rho1(x_wll, k1, b_siler, x0)
+  rho1_wll <- usher3_rho1(x_wll, k1, b_siler, x0, x_cutoff)
 
   # Calculate and return the negative log-likelihood
   ll <- sum(log(rho_na)) + sum(log(rho1_wll)) + sum(log(rho2_ill))
@@ -239,15 +242,17 @@ nll_usher3 <- function(theta, x, ill, x0 = 0) {
 #' @param x The vector of ages-at-death
 #' @param ill The vector of illness indicators
 #' @param x0 Conditional starting age [default: 0]
+#' @param x_cutoff The age at which the well-to-ill transition hazard becomes
+#'   zero [default: Inf]
 #'
 #' @return The Hessian matrix
 #'
 #' @export
-usher3_hessian <- function(theta, x, ill, x0 = 0) {
+usher3_hessian <- function(theta, x, ill, x0 = 0, x_cutoff = Inf) {
   H <- numDeriv::hessian(nll_usher3_hessian_wrapper,
                          theta, method.args = list(eps = 1e-12),
                          ageVect = x,
-                         illVect = ill, x0 = x0)
+                         illVect = ill, x0 = x0, x_cutoff = x_cutoff)
   return(H)
 }
 
@@ -257,11 +262,14 @@ usher3_hessian <- function(theta, x, ill, x0 = 0) {
 #' @param ageVect The vector of ages-at-death
 #' @param illVect The vector of illness indicators
 #' @param x0 Conditional starting age [default: 0]
+#' @param x_cutoff The age at which the well-to-ill transition hazard becomes
+#'   zero [default: Inf]
 #'
 #' @return The negative log-likelihood value
 #'
-nll_usher3_hessian_wrapper <- function(paramVect, ageVect, illVect, x0 = 0) {
-  return(nll_usher3(paramVect, ageVect, illVect, x0))
+nll_usher3_hessian_wrapper <- function(paramVect, ageVect, illVect, x0 = 0, 
+                                       x_cutoff = Inf) {
+  return(nll_usher3(paramVect, ageVect, illVect, x0, x_cutoff))
 }
 
 #' Calculate standard errors, z-scores, and p-values for the Usher 3 model
@@ -270,12 +278,14 @@ nll_usher3_hessian_wrapper <- function(paramVect, ageVect, illVect, x0 = 0) {
 #' @param x The vector of ages-at-death
 #' @param ill The vector of illness indicators
 #' @param x0 Conditional starting age [default: 0]
+#' @param x_cutoff The age at which the well-to-ill transition hazard becomes
+#'   zero [default: Inf]
 #'
 #' @return A data frame with standard errors, z-scores, and p-values
 #'
 #' @export
-usher3_errors <- function(theta, x, ill, x0 = 0) {
-  H <- usher3_hessian(theta, x, ill, x0)
+usher3_errors <- function(theta, x, ill, x0 = 0, x_cutoff = Inf) {
+  H <- usher3_hessian(theta, x, ill, x0, x_cutoff)
   against <- c(0, 1, 0, 0, 0, 0, 0)
   sideAdjustment <- c(1, 2, 1, 1, 1, 1, 1)
   varName <- c('k1', 'k2', 'a1', 'b1', 'a2', 'a3', 'b3')
