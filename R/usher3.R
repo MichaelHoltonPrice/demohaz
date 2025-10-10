@@ -107,14 +107,17 @@ S12 <- function(x, k1, x0 = 0, x_cutoff = Inf) {
 #' @param k1 The transition rate from the healthy state to the ill state
 #' @param b_siler The parameter vector for the Siler hazard model
 #' @param x0 The conditional starting age [default: 0]
+#' @param x_cutoff The age at which the well-to-ill transition hazard becomes
+#'   zero [default: Inf]. When x_cutoff = Inf, this reduces to the standard
+#'   constant hazard model.
 #'
 #' @return The density rho1 evaluated at the locations in the input vector x
 #'
 #' @export
-usher3_rho1 <- function(x, k1, b_siler, x0 = 0) {
+usher3_rho1 <- function(x, k1, b_siler, x0 = 0, x_cutoff = Inf) {
   f13 <- dsiler(x, b_siler, x0)
-  S12 <- exp(-k1 * (x - x0))
-  rho1 <- f13 * S12
+  S12_val <- S12(x, k1, x0, x_cutoff)
+  rho1 <- f13 * S12_val
   return(rho1)
 }
 
@@ -125,10 +128,10 @@ usher3_rho1 <- function(x, k1, b_siler, x0 = 0) {
 #' @return The density rho2 evaluated at the locations in the input vector x
 #'
 #' @export
-usher3_rho2 <- function(x, k1, k2, b_siler, x0 = 0) {
+usher3_rho2 <- function(x, k1, k2, b_siler, x0 = 0, x_cutoff = Inf) {
   f13_0_x <- dsiler(x, b_siler)
   S13_0_x <- ssiler(x, b_siler)
-  S12_0_x0 <- exp(-k1 * x0)
+  S12_0_x0 <- S12(x0, k1, x0 = 0, x_cutoff)
   S13_0_x0 <- ssiler(x0, b_siler)
 
   integralTerm <- rep(NA, length(x))
@@ -136,7 +139,7 @@ usher3_rho2 <- function(x, k1, k2, b_siler, x0 = 0) {
     integralTerm[ii] <- tryCatch(
       integrate(
         usher3_integrand, x0, x[ii],
-        k1 = k1, k2 = k2, b_siler = b_siler
+        k1 = k1, k2 = k2, b_siler = b_siler, x_cutoff = x_cutoff
       )$value,
       error = function(e) { NA }
     )
@@ -152,9 +155,9 @@ usher3_rho2 <- function(x, k1, k2, b_siler, x0 = 0) {
 #' @return The integrand evaluated at y
 #'
 #' @export
-usher3_integrand <- function(y, k1, k2, b_siler) {
+usher3_integrand <- function(y, k1, k2, b_siler, x_cutoff = Inf) {
   # _0_y indicates that the relevant quantity is relative to the interval 0 to y
-  S12_0_y <- exp(-k1 * y)
+  S12_0_y <- S12(y, k1, x0 = 0, x_cutoff)
   S13_0_y <- ssiler(y, b_siler)
 
   return(S12_0_y * (S13_0_y)^(1 - k2))

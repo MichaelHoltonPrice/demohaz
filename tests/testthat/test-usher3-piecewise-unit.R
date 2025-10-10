@@ -167,3 +167,153 @@ test_that("LEH example: 6-year cutoff", {
   expect_equal(S_age50, S_age6, tolerance = 1e-10)
 })
 
+# Tests for integration with usher3 functions
+
+# Create a baseline parameter vector
+b0 <- c(.175, 1.40, .368 * .01, 
+        log(.917 * .1/(.075 * .001))/(.917 * .1), 
+        .917 * .1)
+th0 <- c(2e-2, 1.2, b0)
+
+test_that("usher3_rho1 with x_cutoff = Inf matches original behavior", {
+  k1 <- th0[1]
+  b_siler <- th0[3:7]
+  x <- c(0, 10, 25, 50)
+  x0 <- 0
+  
+  # Calculate with x_cutoff = Inf
+  rho1_inf <- usher3_rho1(x, k1, b_siler, x0, x_cutoff = Inf)
+  
+  # Calculate expected (original formula)
+  f13 <- dsiler(x, b_siler, x0)
+  S12_expected <- exp(-k1 * (x - x0))
+  rho1_expected <- f13 * S12_expected
+  
+  expect_equal(rho1_inf, rho1_expected, tolerance = 1e-10)
+})
+
+test_that("usher3_rho1 with x_cutoff behaves correctly", {
+  k1 <- 0.02
+  b_siler <- th0[3:7]
+  x0 <- 0
+  x_cutoff <- 6
+  
+  # Before cutoff
+  x_before <- c(3, 5, 6)
+  rho1_before <- usher3_rho1(x_before, k1, b_siler, x0, x_cutoff)
+  
+  # After cutoff: rho1 should still be calculated, but with constant S12
+  x_after <- c(10, 20, 50)
+  rho1_after <- usher3_rho1(x_after, k1, b_siler, x0, x_cutoff)
+  
+  # Verify all are positive (valid density values)
+  expect_true(all(rho1_before > 0))
+  expect_true(all(rho1_after > 0))
+  
+  # Manual calculation for one point after cutoff
+  x_test <- 20
+  f13_test <- dsiler(x_test, b_siler, x0)
+  S12_test <- exp(-k1 * (x_cutoff - x0))  # Should be constant after cutoff
+  rho1_expected <- f13_test * S12_test
+  rho1_actual <- usher3_rho1(x_test, k1, b_siler, x0, x_cutoff)
+  
+  expect_equal(rho1_actual, rho1_expected, tolerance = 1e-10)
+})
+
+test_that("usher3_integrand with x_cutoff = Inf matches original behavior", {
+  k1 <- th0[1]
+  k2 <- th0[2]
+  b_siler <- th0[3:7]
+  y <- c(0, 5, 10, 20)
+  
+  # Calculate with x_cutoff = Inf
+  integrand_inf <- usher3_integrand(y, k1, k2, b_siler, x_cutoff = Inf)
+  
+  # Calculate expected (original formula)
+  S12_expected <- exp(-k1 * y)
+  S13_expected <- ssiler(y, b_siler)
+  integrand_expected <- S12_expected * (S13_expected)^(1 - k2)
+  
+  expect_equal(integrand_inf, integrand_expected, tolerance = 1e-10)
+})
+
+test_that("usher3_integrand with x_cutoff behaves correctly", {
+  k1 <- 0.02
+  k2 <- 1.2
+  b_siler <- th0[3:7]
+  x_cutoff <- 6
+  
+  # Before cutoff: normal behavior
+  y_before <- c(0, 3, 6)
+  integrand_before <- usher3_integrand(y_before, k1, k2, b_siler, x_cutoff)
+  
+  # After cutoff: S12 should be constant
+  y_after <- c(10, 20, 50)
+  integrand_after <- usher3_integrand(y_after, k1, k2, b_siler, x_cutoff)
+  
+  # Verify all are positive
+  expect_true(all(integrand_before > 0))
+  expect_true(all(integrand_after > 0))
+  
+  # Manual check for point after cutoff
+  y_test <- 20
+  S12_test <- exp(-k1 * x_cutoff)  # Constant after cutoff
+  S13_test <- ssiler(y_test, b_siler)
+  integrand_expected <- S12_test * (S13_test)^(1 - k2)
+  integrand_actual <- usher3_integrand(y_test, k1, k2, b_siler, x_cutoff)
+  
+  expect_equal(integrand_actual, integrand_expected, tolerance = 1e-10)
+})
+
+test_that("usher3_rho2 with x_cutoff = Inf matches original behavior", {
+  k1 <- th0[1]
+  k2 <- th0[2]
+  b_siler <- th0[3:7]
+  x <- c(10, 25, 50)
+  x0 <- 0
+  
+  # Calculate with x_cutoff = Inf
+  rho2_inf <- usher3_rho2(x, k1, k2, b_siler, x0, x_cutoff = Inf)
+  
+  # Calculate expected using manual integration
+  # (This is a complex integral, so we just verify it's finite and positive)
+  expect_true(all(is.finite(rho2_inf)))
+  expect_true(all(rho2_inf > 0))
+  
+  # Also verify it matches rho2 calculated with the old approach by
+  # checking the integral term calculation
+  f13_0_x <- dsiler(x, b_siler)
+  S13_0_x <- ssiler(x, b_siler)
+  S12_0_x0 <- exp(-k1 * x0)
+  S13_0_x0 <- ssiler(x0, b_siler)
+  
+  integralTerm <- rep(NA, length(x))
+  for (ii in 1:length(x)) {
+    integralTerm[ii] <- integrate(
+      usher3_integrand, x0, x[ii],
+      k1 = k1, k2 = k2, b_siler = b_siler, x_cutoff = Inf
+    )$value
+  }
+  
+  rho2_expected <- k1 * k2 * f13_0_x * S13_0_x^(k2 - 1) * 
+                   integralTerm / S12_0_x0 / S13_0_x0
+  
+  expect_equal(rho2_inf, rho2_expected, tolerance = 1e-8)
+})
+
+test_that("usher3_rho2 with x_cutoff produces valid densities", {
+  k1 <- 0.02
+  k2 <- 1.2
+  b_siler <- th0[3:7]
+  x0 <- 0
+  x_cutoff <- 6
+  
+  # Test at various ages
+  x <- c(10, 20, 30, 50)
+  rho2 <- usher3_rho2(x, k1, k2, b_siler, x0, x_cutoff)
+  
+  # Should all be finite and positive
+  expect_true(all(is.finite(rho2)))
+  expect_true(all(rho2 > 0))
+})
+
