@@ -23,6 +23,85 @@
 #' @name usher3
 NULL
 
+#' Calculate the cumulative hazard for the well-to-ill transition
+#'
+#' This function computes the cumulative hazard for the transition from the
+#' healthy (well) state to the ill state over the age interval [x0, x]. It
+#' supports a single cutoff age x_cutoff, after which the hazard becomes zero.
+#' This is useful for modeling conditions like Linear Enamel Hypoplasia (LEH)
+#' that can only occur during specific age windows (e.g., 0-6 years for LEH).
+#'
+#' @param x The age(s) at which to evaluate the cumulative hazard
+#' @param k1 The constant transition rate from the healthy state to the ill
+#'   state (before x_cutoff)
+#' @param x0 The conditional starting age [default: 0]
+#' @param x_cutoff The age at which the hazard becomes zero [default: Inf].
+#'   When x_cutoff = Inf, this reduces to the standard constant hazard model.
+#'
+#' @return The cumulative hazard evaluated at the location(s) in x
+#'
+#' @details
+#' For each age x, the cumulative hazard is calculated as:
+#' - If x <= x_cutoff: H12 = k1 * (x - x0)
+#' - If x > x_cutoff: H12 = k1 * (x_cutoff - x0)
+#'
+#' The function is vectorized over x.
+#'
+#' Future extensions could support piecewise constant hazards with multiple
+#' breakpoints and different hazard rates in each interval.
+#'
+#' @export
+H12 <- function(x, k1, x0 = 0, x_cutoff = Inf) {
+  if (k1 < 0) {
+    stop('k1 cannot be negative')
+  }
+  if (x0 < 0) {
+    stop('x0 cannot be negative')
+  }
+  if (x_cutoff < x0) {
+    stop('x_cutoff must be greater than or equal to x0')
+  }
+  
+  # For ages before cutoff: hazard accumulates normally
+  # For ages after cutoff: hazard stops accumulating at cutoff
+  cumhaz <- k1 * pmin(x - x0, x_cutoff - x0)
+  cumhaz[x < x0] <- 0  # No hazard before start age
+  
+  return(cumhaz)
+}
+
+#' Calculate the survival function for the well-to-ill transition
+#'
+#' This function computes the survival function (probability of remaining in
+#' the healthy state) for the transition from well to ill over the age interval
+#' [x0, x]. It supports a single cutoff age x_cutoff, after which the hazard
+#' becomes zero.
+#'
+#' @param x The age(s) at which to evaluate the survival function
+#' @param k1 The constant transition rate from the healthy state to the ill
+#'   state (before x_cutoff)
+#' @param x0 The conditional starting age [default: 0]
+#' @param x_cutoff The age at which the hazard becomes zero [default: Inf].
+#'   When x_cutoff = Inf, this reduces to the standard constant hazard model.
+#'
+#' @return The survival probability evaluated at the location(s) in x
+#'
+#' @details
+#' The survival function is S12(x) = exp(-H12(x)), where H12 is the cumulative
+#' hazard calculated by the H12 function.
+#'
+#' When x_cutoff = Inf, this gives S12(x) = exp(-k1 * (x - x0)), which matches
+#' the standard constant hazard model currently used in usher3_rho1 and
+#' usher3_integrand.
+#'
+#' Future extensions could support piecewise constant hazards with multiple
+#' breakpoints and different hazard rates in each interval.
+#'
+#' @export
+S12 <- function(x, k1, x0 = 0, x_cutoff = Inf) {
+  return(exp(-H12(x, k1, x0, x_cutoff)))
+}
+
 #' @rdname usher3
 #' @param x The vector of ages
 #' @param k1 The transition rate from the healthy state to the ill state
