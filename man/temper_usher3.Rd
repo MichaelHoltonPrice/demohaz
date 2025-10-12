@@ -52,7 +52,9 @@ Siler documentation)}
 
 \item{use_gompertz}{Whether to use Gompert-Makeham mortality [default: FAlSE]}
 
-\item{...}{Additional arguments passed to obj_fun}
+\item{...}{Additional arguments passed to obj_fun, including x (ages), 
+ill (illness indicators), x0 (conditional starting age, default 0), and
+x_cut (age cutoff for transitions, default Inf)}
 }
 \value{
 A list containing the results of tempering and tuning

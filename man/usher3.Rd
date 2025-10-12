@@ -7,11 +7,11 @@
 \alias{usher3_integrand}
 \title{Usher 3 Illness-Death Model Functions}
 \usage{
-usher3_rho1(x, k1, b_siler, x0 = 0)
+usher3_rho1(x, k1, b_siler, x0 = 0, x_cut = Inf)
 
-usher3_rho2(x, k1, k2, b_siler, x0 = 0)
+usher3_rho2(x, k1, k2, b_siler, x0 = 0, x_cut = Inf)
 
-usher3_integrand(y, k1, k2, b_siler)
+usher3_integrand(y, k1, k2, b_siler, x_cut = Inf)
 }
 \arguments{
 \item{x}{The vector of ages}
@@ -21,6 +21,10 @@ usher3_integrand(y, k1, k2, b_siler)
 \item{b_siler}{The parameter vector for the Siler hazard model}
 
 \item{x0}{The conditional starting age [default: 0]}
+
+\item{x_cut}{The age at which the well-to-ill transition hazard becomes
+zero [default: Inf]. When x_cut = Inf, this reduces to the standard
+constant hazard model.}
 
 \item{k2}{The factor by which the mortality hazard out of the ill state is
 larger than that out of the healthy state}

@@ -4,7 +4,7 @@
 \alias{nll_usher3_hessian_wrapper}
 \title{Wrapper function for the negative log-likelihood of the Usher 3 model}
 \usage{
-nll_usher3_hessian_wrapper(paramVect, ageVect, illVect, x0 = 0)
+nll_usher3_hessian_wrapper(paramVect, ageVect, illVect, x0 = 0, x_cut = Inf)
 }
 \arguments{
 \item{paramVect}{The parameter vector for the Usher illness-death model}
@@ -14,6 +14,9 @@ nll_usher3_hessian_wrapper(paramVect, ageVect, illVect, x0 = 0)
 \item{illVect}{The vector of illness indicators}
 
 \item{x0}{Conditional starting age [default: 0]}
+
+\item{x_cut}{The age at which the well-to-ill transition hazard becomes
+zero [default: Inf]}
 }
 \value{
 The negative log-likelihood value

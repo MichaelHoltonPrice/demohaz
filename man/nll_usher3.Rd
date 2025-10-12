@@ -8,7 +8,7 @@ mortality term is zero; this is accomplished by detecting if the input
 parameter vector, theta, has length 5, which implies no infant mortality
 term.}
 \usage{
-nll_usher3(theta, x, ill, x0 = 0)
+nll_usher3(theta, x, ill, x0 = 0, x_cut = Inf)
 }
 \arguments{
 \item{theta}{The parameter vector for the Usher illness-death model with
@@ -20,6 +20,10 @@ ordering [k1, k2, mort]. The mortality parameter vector is
 \item{ill}{The vector of illness indicators, which can have NA entries}
 
 \item{x0}{Conditional starting age [default: 0]}
+
+\item{x_cut}{The age at which the well-to-ill transition hazard becomes
+zero [default: Inf]. When x_cut = Inf, this reduces to the standard
+constant hazard model.}
 }
 \value{
 The negative log-likelihood value

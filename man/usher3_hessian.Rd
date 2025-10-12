@@ -4,7 +4,7 @@
 \alias{usher3_hessian}
 \title{Calculate the Hessian matrix for the Usher 3 model}
 \usage{
-usher3_hessian(theta, x, ill, x0 = 0)
+usher3_hessian(theta, x, ill, x0 = 0, x_cut = Inf)
 }
 \arguments{
 \item{theta}{The parameter vector for the Usher illness-death model}
@@ -14,6 +14,9 @@ usher3_hessian(theta, x, ill, x0 = 0)
 \item{ill}{The vector of illness indicators}
 
 \item{x0}{Conditional starting age [default: 0]}
+
+\item{x_cut}{The age at which the well-to-ill transition hazard becomes
+zero [default: Inf]}
 }
 \value{
 The Hessian matrix

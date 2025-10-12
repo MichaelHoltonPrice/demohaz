@@ -4,7 +4,17 @@
 \alias{sample_usher3}
 \title{Sample from the Usher 3 distribution using importance sampling}
 \usage{
-sample_usher3(N, th, dx, xmax, x_mid = NA, infant_prop = NA, area_tol = 1e-06)
+sample_usher3(
+  N,
+  th,
+  dx,
+  xmax,
+  x_mid = NA,
+  infant_prop = NA,
+  area_tol = 1e-06,
+  x0 = 0,
+  x_cut = Inf
+)
 }
 \arguments{
 \item{N}{The number of samples to generate.}
@@ -21,6 +31,12 @@ sample_usher3(N, th, dx, xmax, x_mid = NA, infant_prop = NA, area_tol = 1e-06)
 
 \item{area_tol}{The tolerance for checking the area under the density
 curves (default: 1e-6).}
+
+\item{x0}{The conditional starting age [default: 0]}
+
+\item{x_cut}{The age at which the well-to-ill transition hazard becomes
+zero [default: Inf]. When x_cut = Inf, this reduces to the standard
+constant hazard model.}
 }
 \value{
 A list containing the sampled ages (x), illness indicators (ill),
