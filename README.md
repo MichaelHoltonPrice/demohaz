@@ -131,11 +131,10 @@ R
 devtools::test()
 ```
 
-To test set of tests in an individual file (though test_file is now deprecated
-and may soon be removed):
+To test an individual file when it's open in your editor:
 
 ```R
-devtools::test_file('tests/testthat/test-data_io-unit.R')
+devtools::test_active_file('tests/testthat/test-data_io-unit.R')
 ```
 
 To run a sub-set of tests from the command line rather than inside R (which helps avoid R's flawed support for package re-installation) use this command:
@@ -143,8 +142,6 @@ To run a sub-set of tests from the command line rather than inside R (which help
 ```bash
 Rscript -e "devtools::load_all(); devtools::test(filter = 'usher3')"
 ```
-
-Rscript -e "devtools::load_all(); devtools::test(filter = 'usher3')"
 
 # Local dev
 If you wish to examine or modify the code, use the following sequence of steps

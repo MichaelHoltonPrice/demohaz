@@ -27,23 +27,24 @@ NULL
 #'
 #' This function computes the cumulative hazard for the transition from the
 #' healthy (well) state to the ill state over the age interval [x0, x]. It
-#' supports a single cutoff age x_cutoff, after which the hazard becomes zero.
+#' supports a single cutoff age x_cut, after which the hazard becomes zero.
 #' This is useful for modeling conditions like Linear Enamel Hypoplasia (LEH)
 #' that can only occur during specific age windows (e.g., 0-6 years for LEH).
 #'
 #' @param x The age(s) at which to evaluate the cumulative hazard
 #' @param k1 The constant transition rate from the healthy state to the ill
-#'   state (before x_cutoff)
+#'   state (before x_cut)
 #' @param x0 The conditional starting age [default: 0]
-#' @param x_cutoff The age at which the hazard becomes zero [default: Inf].
-#'   When x_cutoff = Inf, this reduces to the standard constant hazard model.
+#' @param x_cut The age at which the hazard becomes zero [default: Inf].
+#'   When x_cut = Inf, this reduces to the standard constant hazard model.
 #'
 #' @return The cumulative hazard evaluated at the location(s) in x
 #'
 #' @details
 #' For each age x, the cumulative hazard is calculated as:
-#' - If x <= x_cutoff: H12 = k1 * (x - x0)
-#' - If x > x_cutoff: H12 = k1 * (x_cutoff - x0)
+#' - If x0 >= x_cut: H12 = 0 (cutoff already passed)
+#' - If x0 < x_cut and x <= x_cut: H12 = k1 * (x - x0)
+#' - If x0 < x_cut and x > x_cut: H12 = k1 * (x_cut - x0)
 #'
 #' The function is vectorized over x.
 #'
@@ -51,21 +52,25 @@ NULL
 #' breakpoints and different hazard rates in each interval.
 #'
 #' @export
-H12 <- function(x, k1, x0 = 0, x_cutoff = Inf) {
+H12 <- function(x, k1, x0 = 0, x_cut = Inf) {
   if (k1 < 0) {
     stop('k1 cannot be negative')
   }
   if (x0 < 0) {
     stop('x0 cannot be negative')
   }
-  if (x_cutoff < x0) {
-    stop('x_cutoff must be greater than or equal to x0')
+  if (x_cut <= 0) {
+    stop('x_cut must be positive')
+  }
+  
+  # If starting age is at or past the cutoff, no transitions can occur
+  if (is.finite(x_cut) && x0 >= x_cut) {
+    return(rep(0, length(x)))
   }
   
   # For ages before cutoff: hazard accumulates normally
   # For ages after cutoff: hazard stops accumulating at cutoff
-  cumhaz <- k1 * pmin(x - x0, x_cutoff - x0)
-  cumhaz[x < x0] <- 0  # No hazard before start age
+  cumhaz <- k1 * pmin(pmax(x - x0, 0), x_cut - x0)
   
   return(cumhaz)
 }
@@ -74,15 +79,15 @@ H12 <- function(x, k1, x0 = 0, x_cutoff = Inf) {
 #'
 #' This function computes the survival function (probability of remaining in
 #' the healthy state) for the transition from well to ill over the age interval
-#' [x0, x]. It supports a single cutoff age x_cutoff, after which the hazard
+#' [x0, x]. It supports a single cutoff age x_cut, after which the hazard
 #' becomes zero.
 #'
 #' @param x The age(s) at which to evaluate the survival function
 #' @param k1 The constant transition rate from the healthy state to the ill
-#'   state (before x_cutoff)
+#'   state (before x_cut)
 #' @param x0 The conditional starting age [default: 0]
-#' @param x_cutoff The age at which the hazard becomes zero [default: Inf].
-#'   When x_cutoff = Inf, this reduces to the standard constant hazard model.
+#' @param x_cut The age at which the hazard becomes zero [default: Inf].
+#'   When x_cut = Inf, this reduces to the standard constant hazard model.
 #'
 #' @return The survival probability evaluated at the location(s) in x
 #'
@@ -90,7 +95,7 @@ H12 <- function(x, k1, x0 = 0, x_cutoff = Inf) {
 #' The survival function is S12(x) = exp(-H12(x)), where H12 is the cumulative
 #' hazard calculated by the H12 function.
 #'
-#' When x_cutoff = Inf, this gives S12(x) = exp(-k1 * (x - x0)), which matches
+#' When x_cut = Inf, this gives S12(x) = exp(-k1 * (x - x0)), which matches
 #' the standard constant hazard model currently used in usher3_rho1 and
 #' usher3_integrand.
 #'
@@ -98,8 +103,8 @@ H12 <- function(x, k1, x0 = 0, x_cutoff = Inf) {
 #' breakpoints and different hazard rates in each interval.
 #'
 #' @export
-S12 <- function(x, k1, x0 = 0, x_cutoff = Inf) {
-  return(exp(-H12(x, k1, x0, x_cutoff)))
+S12 <- function(x, k1, x0 = 0, x_cut = Inf) {
+  return(exp(-H12(x, k1, x0, x_cut)))
 }
 
 #' @rdname usher3
@@ -107,16 +112,16 @@ S12 <- function(x, k1, x0 = 0, x_cutoff = Inf) {
 #' @param k1 The transition rate from the healthy state to the ill state
 #' @param b_siler The parameter vector for the Siler hazard model
 #' @param x0 The conditional starting age [default: 0]
-#' @param x_cutoff The age at which the well-to-ill transition hazard becomes
-#'   zero [default: Inf]. When x_cutoff = Inf, this reduces to the standard
+#' @param x_cut The age at which the well-to-ill transition hazard becomes
+#'   zero [default: Inf]. When x_cut = Inf, this reduces to the standard
 #'   constant hazard model.
 #'
 #' @return The density rho1 evaluated at the locations in the input vector x
 #'
 #' @export
-usher3_rho1 <- function(x, k1, b_siler, x0 = 0, x_cutoff = Inf) {
+usher3_rho1 <- function(x, k1, b_siler, x0 = 0, x_cut = Inf) {
   f13 <- dsiler(x, b_siler, x0)
-  S12_val <- S12(x, k1, x0, x_cutoff)
+  S12_val <- S12(x, k1, x0, x_cut)
   rho1 <- f13 * S12_val
   return(rho1)
 }
@@ -128,10 +133,10 @@ usher3_rho1 <- function(x, k1, b_siler, x0 = 0, x_cutoff = Inf) {
 #' @return The density rho2 evaluated at the locations in the input vector x
 #'
 #' @export
-usher3_rho2 <- function(x, k1, k2, b_siler, x0 = 0, x_cutoff = Inf) {
+usher3_rho2 <- function(x, k1, k2, b_siler, x0 = 0, x_cut = Inf) {
   f13_0_x <- dsiler(x, b_siler)
   S13_0_x <- ssiler(x, b_siler)
-  S12_0_x0 <- S12(x0, k1, x0 = 0, x_cutoff)
+  S12_0_x0 <- S12(x0, k1, x0 = 0, x_cut)
   S13_0_x0 <- ssiler(x0, b_siler)
 
   integralTerm <- rep(NA, length(x))
@@ -139,7 +144,7 @@ usher3_rho2 <- function(x, k1, k2, b_siler, x0 = 0, x_cutoff = Inf) {
     integralTerm[ii] <- tryCatch(
       integrate(
         usher3_integrand, x0, x[ii],
-        k1 = k1, k2 = k2, b_siler = b_siler, x_cutoff = x_cutoff
+        k1 = k1, k2 = k2, b_siler = b_siler, x_cut = x_cut
       )$value,
       error = function(e) { NA }
     )
@@ -155,9 +160,9 @@ usher3_rho2 <- function(x, k1, k2, b_siler, x0 = 0, x_cutoff = Inf) {
 #' @return The integrand evaluated at y
 #'
 #' @export
-usher3_integrand <- function(y, k1, k2, b_siler, x_cutoff = Inf) {
+usher3_integrand <- function(y, k1, k2, b_siler, x_cut = Inf) {
   # _0_y indicates that the relevant quantity is relative to the interval 0 to y
-  S12_0_y <- S12(y, k1, x0 = 0, x_cutoff)
+  S12_0_y <- S12(y, k1, x0 = 0, x_cut)
   S13_0_y <- ssiler(y, b_siler)
 
   return(S12_0_y * (S13_0_y)^(1 - k2))
@@ -175,14 +180,14 @@ usher3_integrand <- function(y, k1, k2, b_siler, x_cutoff = Inf) {
 #' @param x The vector of ages-at-death
 #' @param ill The vector of illness indicators, which can have NA entries
 #' @param x0 Conditional starting age [default: 0]
-#' @param x_cutoff The age at which the well-to-ill transition hazard becomes
-#'   zero [default: Inf]. When x_cutoff = Inf, this reduces to the standard
+#' @param x_cut The age at which the well-to-ill transition hazard becomes
+#'   zero [default: Inf]. When x_cut = Inf, this reduces to the standard
 #'   constant hazard model.
 #'
 #' @return The negative log-likelihood value
 #'
 #' @export
-nll_usher3 <- function(theta, x, ill, x0 = 0, x_cutoff = Inf) {
+nll_usher3 <- function(theta, x, ill, x0 = 0, x_cut = Inf) {
   k1 <- theta[1]
   if (k1 < 0) {
     return(Inf)
@@ -210,11 +215,11 @@ nll_usher3 <- function(theta, x, ill, x0 = 0, x_cutoff = Inf) {
   # by using rho1 + rho2 for the likelihood.
   ind_na <- is.na(ill)
   x_na <- x[ind_na]
-  rho2_na_ill <- usher3_rho2(x_na, k1, k2, b_siler, x0, x_cutoff)
+  rho2_na_ill <- usher3_rho2(x_na, k1, k2, b_siler, x0, x_cut)
   if (any(is.na(rho2_na_ill))) {
     return(Inf)
   }
-  rho1_na_wll <- usher3_rho1(x_na, k1, b_siler, x0, x_cutoff)
+  rho1_na_wll <- usher3_rho1(x_na, k1, b_siler, x0, x_cut)
   # rho_na contributes to the  likelihood below
   rho_na <- rho2_na_ill + rho1_na_wll
 
@@ -224,12 +229,12 @@ nll_usher3 <- function(theta, x, ill, x0 = 0, x_cutoff = Inf) {
   x_wll <- x[ill == 0]
   x_ill <- x[ill == 1]
 
-  rho2_ill <- usher3_rho2(x_ill, k1, k2, b_siler, x0, x_cutoff)
+  rho2_ill <- usher3_rho2(x_ill, k1, k2, b_siler, x0, x_cut)
   if (any(is.na(rho2_ill))) {
     return(Inf)
   }
 
-  rho1_wll <- usher3_rho1(x_wll, k1, b_siler, x0, x_cutoff)
+  rho1_wll <- usher3_rho1(x_wll, k1, b_siler, x0, x_cut)
 
   # Calculate and return the negative log-likelihood
   ll <- sum(log(rho_na)) + sum(log(rho1_wll)) + sum(log(rho2_ill))
@@ -242,17 +247,23 @@ nll_usher3 <- function(theta, x, ill, x0 = 0, x_cutoff = Inf) {
 #' @param x The vector of ages-at-death
 #' @param ill The vector of illness indicators
 #' @param x0 Conditional starting age [default: 0]
-#' @param x_cutoff The age at which the well-to-ill transition hazard becomes
+#' @param x_cut The age at which the well-to-ill transition hazard becomes
 #'   zero [default: Inf]
 #'
 #' @return The Hessian matrix
 #'
 #' @export
-usher3_hessian <- function(theta, x, ill, x0 = 0, x_cutoff = Inf) {
+usher3_hessian <- function(theta, x, ill, x0 = 0, x_cut = Inf) {
+  # Finite x_cut not yet supported for Hessian calculation
+  if (is.finite(x_cut)) {
+    stop("Finite x_cut is not yet supported for usher3_hessian. ",
+         "Use x_cut = Inf (the default).")
+  }
+  
   H <- numDeriv::hessian(nll_usher3_hessian_wrapper,
                          theta, method.args = list(eps = 1e-12),
                          ageVect = x,
-                         illVect = ill, x0 = x0, x_cutoff = x_cutoff)
+                         illVect = ill, x0 = x0, x_cut = x_cut)
   return(H)
 }
 
@@ -262,14 +273,14 @@ usher3_hessian <- function(theta, x, ill, x0 = 0, x_cutoff = Inf) {
 #' @param ageVect The vector of ages-at-death
 #' @param illVect The vector of illness indicators
 #' @param x0 Conditional starting age [default: 0]
-#' @param x_cutoff The age at which the well-to-ill transition hazard becomes
+#' @param x_cut The age at which the well-to-ill transition hazard becomes
 #'   zero [default: Inf]
 #'
 #' @return The negative log-likelihood value
 #'
 nll_usher3_hessian_wrapper <- function(paramVect, ageVect, illVect, x0 = 0, 
-                                       x_cutoff = Inf) {
-  return(nll_usher3(paramVect, ageVect, illVect, x0, x_cutoff))
+                                       x_cut = Inf) {
+  return(nll_usher3(paramVect, ageVect, illVect, x0, x_cut))
 }
 
 #' Calculate standard errors, z-scores, and p-values for the Usher 3 model
@@ -278,14 +289,20 @@ nll_usher3_hessian_wrapper <- function(paramVect, ageVect, illVect, x0 = 0,
 #' @param x The vector of ages-at-death
 #' @param ill The vector of illness indicators
 #' @param x0 Conditional starting age [default: 0]
-#' @param x_cutoff The age at which the well-to-ill transition hazard becomes
+#' @param x_cut The age at which the well-to-ill transition hazard becomes
 #'   zero [default: Inf]
 #'
 #' @return A data frame with standard errors, z-scores, and p-values
 #'
 #' @export
-usher3_errors <- function(theta, x, ill, x0 = 0, x_cutoff = Inf) {
-  H <- usher3_hessian(theta, x, ill, x0, x_cutoff)
+usher3_errors <- function(theta, x, ill, x0 = 0, x_cut = Inf) {
+  # Finite x_cut not yet supported for error estimation
+  if (is.finite(x_cut)) {
+    stop("Finite x_cut is not yet supported for usher3_errors. ",
+         "Use x_cut = Inf (the default).")
+  }
+  
+  H <- usher3_hessian(theta, x, ill, x0, x_cut)
   against <- c(0, 1, 0, 0, 0, 0, 0)
   sideAdjustment <- c(1, 2, 1, 1, 1, 1, 1)
   varName <- c('k1', 'k2', 'a1', 'b1', 'a2', 'a3', 'b3')
@@ -345,14 +362,24 @@ calc_filtration_density <- function(xcalc, x_mid, infant_prop, discrete = T) {
 #' @return A list containing the sampled ages (x), illness indicators (ill),
 #'   and the calculated densities (rho1 and rho2).
 #'
+#' @param x0 The conditional starting age [default: 0]
+#' @param x_cut The age at which the well-to-ill transition hazard becomes
+#'   zero [default: Inf]. When x_cut = Inf, this reduces to the standard
+#'   constant hazard model.
+#'
 #' @examples
 #' th <- c(2e-2, 1.2, 0.175, 1.40, 0.368, 0.01, 0.075, 0.001, 0.917, 0.1)
 #' sample_usher3(100, th, 0.01, 120)
 #'
 #' @export
-# TODO: add x0 as an optional input here
 sample_usher3 <- function(N, th, dx, xmax, x_mid = NA, infant_prop = NA,
-                          area_tol = 1e-6) {
+                          area_tol = 1e-6, x0 = 0, x_cut = Inf) {
+  # Finite x_cut not yet supported for importance sampling
+  if (is.finite(x_cut)) {
+    stop("Finite x_cut is not yet supported for sample_usher3. ",
+         "Use x_cut = Inf (the default).")
+  }
+  
   # Set up the sampling grid and calculate the densities
   filter_by_age <- !is.na(x_mid)
   k1 <- th[1]
@@ -366,8 +393,8 @@ sample_usher3 <- function(N, th, dx, xmax, x_mid = NA, infant_prop = NA,
   # We also use xmax and the maximum value of the evaluated density to set
   # the limits of the uniform rectangular sampling used in importance sampling
   xcalc <- seq(0, xmax, by = dx)
-  rho1 <- usher3_rho1(xcalc, k1, b_siler)
-  rho2 <- usher3_rho2(xcalc, k1, k2, b_siler)
+  rho1 <- usher3_rho1(xcalc, k1, b_siler, x0, x_cut)
+  rho2 <- usher3_rho2(xcalc, k1, k2, b_siler, x0, x_cut)
 
   # Treat NA as 0 in rho1 and rho2
   rho1[is.na(rho1)] <- 0
@@ -425,8 +452,8 @@ sample_usher3 <- function(N, th, dx, xmax, x_mid = NA, infant_prop = NA,
   while (n_sampled < N) {
     x_samp <- runif(1, min = 0, max = x_lim)
     y_samp <- runif(1, min = 0, max = y_lim)
-    y1 <- usher3_rho1(x_samp, k1, b_siler)
-    y2 <- usher3_rho2(x_samp, k1, k2, b_siler)
+    y1 <- usher3_rho1(x_samp, k1, b_siler, x0, x_cut)
+    y2 <- usher3_rho2(x_samp, k1, k2, b_siler, x0, x_cut)
     # Treat NA as 0 in y1 and y2
     if (is.na(y1)) {
       y1 <- 0
@@ -458,12 +485,11 @@ sample_usher3 <- function(N, th, dx, xmax, x_mid = NA, infant_prop = NA,
   return(list(x = x, ill = ill, rho1 = rho1, rho2 = rho2))
 }
 
-# TODO: accommodate x0
-nll_usher3_optim_wrapper <- function(th_bar, x, ill) {
+nll_usher3_optim_wrapper <- function(th_bar, ...) {
   # A wrapper function use as the objective function for
   # temper_usher3
   th <- exp(th_bar)
-  return(nll_usher3(th, x, ill))
+  return(nll_usher3(th, ...))
 }
 
 #' Use parallel tempering to fit the usher3 model.
@@ -491,7 +517,9 @@ nll_usher3_optim_wrapper <- function(th_bar, x, ill) {
 #' @param maxiter The maximum number of iterations [default: 1000]
 #' @param report_period The reporting period for verbose output [default: 50]
 #' @param use_gompertz Whether to use Gompert-Makeham mortality [default: FAlSE]
-#' @param ... Additional arguments passed to obj_fun
+#' @param ... Additional arguments passed to obj_fun, including x (ages), 
+#'   ill (illness indicators), x0 (conditional starting age, default 0), and
+#'   x_cut (age cutoff for transitions, default Inf)
 #'
 #' @return A list containing the results of tempering and tuning
 #'
