@@ -273,7 +273,7 @@ p_12 <- function(x, k1, k2, b_siler, x0 = 0, x_cut = Inf) {
         b_siler = b_siler
       )$value,
       error = function(e) {
-        warning(paste("Integration failed in p_12 at x =", x[idx], ":", e$message))
+        # Silently return NA - caller handles this
         return(NA)
       }
     )
@@ -346,18 +346,16 @@ calc_weights <- function(x0, k1, k2, b_siler, x_cut = Inf) {
   p11_val <- p_11(x0, k1, b_siler, x0 = 0, x_cut)
   p12_val <- p_12(x0, k1, k2, b_siler, x0 = 0, x_cut)
   
-  # Check for integration failure
+  # Check for integration failure - silently return NA
   if (is.na(p12_val)) {
-    warning("Failed to compute p_12, returning NA weights")
     return(c(w1 = NA, w2 = NA))
   }
   
   # Total survival probability from age 0 to x0
   total_survival <- p11_val + p12_val
   
-  # Check for numerical issues
+  # Check for numerical issues - silently return NA
   if (total_survival <= 0) {
-    warning("Total survival probability is non-positive, returning NA weights")
     return(c(w1 = NA, w2 = NA))
   }
   
@@ -557,7 +555,7 @@ q_2 <- function(x, w, k1, k2, b_siler, x0 = 0, x_cut = Inf) {
           b_siler = b_siler
         )$value,
         error = function(e) {
-          warning(paste("Integration failed in q_2 at x =", x_val, ":", e$message))
+          # Silently return NA - caller (e.g., nll_usher3) handles this
           return(NA)
         }
       )
@@ -585,42 +583,61 @@ q_2 <- function(x, w, k1, k2, b_siler, x0 = 0, x_cut = Inf) {
 #' @param x_cut The age at which the well-to-ill transition hazard becomes
 #'   zero [default: Inf]. When x_cut = Inf, this reduces to the standard
 #'   constant hazard model.
+#' @param w Optional weight vector [w_1(x0), w_2(x0)]. If NULL (default), 
+#'   weights are computed using calc_weights, which assumes disease etiology 
+#'   unfolds from birth. To assume everyone starts in the well state at x0, 
+#'   pass w = c(1, 0).
+#' @param k2 Optional k2 parameter (only needed if w is NULL for weight calculation)
 #'
 #' @return The density rho1 evaluated at the locations in the input vector x
 #'
 #' @export
-usher3_rho1 <- function(x, k1, b_siler, x0 = 0, x_cut = Inf) {
-  f13 <- dsiler(x, b_siler, x0)
-  S12_val <- S12(x, k1, x0, x_cut)
-  rho1 <- f13 * S12_val
+usher3_rho1 <- function(x, k1, b_siler, x0 = 0, x_cut = Inf, w = NULL, k2 = NULL) {
+  # If w is not provided, calculate it (requires k2)
+  if (is.null(w)) {
+    if (is.null(k2)) {
+      stop('k2 must be provided if w is NULL')
+    }
+    w <- calc_weights(x0, k1, k2, b_siler, x_cut)
+  }
+  
+  # Calculate occupancy probability
+  q1_val <- q_1(x, w, k1, b_siler, x0, x_cut, k2)
+  
+  # Calculate hazard lambda_13(x)
+  lambda_13 <- hsiler(x, b_siler)
+  
+  # rho1 = q_1 * lambda_13
+  rho1 <- q1_val * lambda_13
   return(rho1)
 }
 
 #' @rdname usher3
 #' @param k2 The factor by which the mortality hazard out of the ill state is
 #'   larger than that out of the healthy state
+#' @param w Optional weight vector [w_1(x0), w_2(x0)]. If NULL (default), 
+#'   weights are computed using calc_weights, which assumes disease etiology 
+#'   unfolds from birth. To assume everyone starts in the well state at x0, 
+#'   pass w = c(1, 0).
 #'
 #' @return The density rho2 evaluated at the locations in the input vector x
 #'
 #' @export
-usher3_rho2 <- function(x, k1, k2, b_siler, x0 = 0, x_cut = Inf) {
-  f13_0_x <- dsiler(x, b_siler)
-  S13_0_x <- ssiler(x, b_siler)
-  S12_0_x0 <- S12(x0, k1, x0 = 0, x_cut)
-  S13_0_x0 <- ssiler(x0, b_siler)
-
-  integralTerm <- rep(NA, length(x))
-  for (ii in 1:length(x)) {
-    integralTerm[ii] <- tryCatch(
-      integrate(
-        usher3_integrand, x0, x[ii],
-        k1 = k1, k2 = k2, b_siler = b_siler, x_cut = x_cut
-      )$value,
-      error = function(e) { NA }
-    )
+usher3_rho2 <- function(x, k1, k2, b_siler, x0 = 0, x_cut = Inf, w = NULL) {
+  # If w is not provided, calculate it
+  if (is.null(w)) {
+    w <- calc_weights(x0, k1, k2, b_siler, x_cut)
   }
-
-  rho2 <- k1 * k2 * f13_0_x * S13_0_x^(k2 - 1) * integralTerm / S12_0_x0 / S13_0_x0
+  
+  # Calculate occupancy probability
+  q2_val <- q_2(x, w, k1, k2, b_siler, x0, x_cut)
+  
+  # Calculate hazard lambda_23(x) = k2 * lambda_13(x)
+  lambda_13 <- hsiler(x, b_siler)
+  lambda_23 <- k2 * lambda_13
+  
+  # rho2 = q_2 * lambda_23
+  rho2 <- q2_val * lambda_23
   return(rho2)
 }
 
@@ -689,7 +706,7 @@ nll_usher3 <- function(theta, x, ill, x0 = 0, x_cut = Inf) {
   if (any(is.na(rho2_na_ill))) {
     return(Inf)
   }
-  rho1_na_wll <- usher3_rho1(x_na, k1, b_siler, x0, x_cut)
+  rho1_na_wll <- usher3_rho1(x_na, k1, b_siler, x0, x_cut, k2 = k2)
   # rho_na contributes to the  likelihood below
   rho_na <- rho2_na_ill + rho1_na_wll
 
@@ -704,7 +721,7 @@ nll_usher3 <- function(theta, x, ill, x0 = 0, x_cut = Inf) {
     return(Inf)
   }
 
-  rho1_wll <- usher3_rho1(x_wll, k1, b_siler, x0, x_cut)
+  rho1_wll <- usher3_rho1(x_wll, k1, b_siler, x0, x_cut, k2 = k2)
 
   # Calculate and return the negative log-likelihood
   ll <- sum(log(rho_na)) + sum(log(rho1_wll)) + sum(log(rho2_ill))
@@ -863,7 +880,7 @@ sample_usher3 <- function(N, th, dx, xmax, x_mid = NA, infant_prop = NA,
   # We also use xmax and the maximum value of the evaluated density to set
   # the limits of the uniform rectangular sampling used in importance sampling
   xcalc <- seq(0, xmax, by = dx)
-  rho1 <- usher3_rho1(xcalc, k1, b_siler, x0, x_cut)
+  rho1 <- usher3_rho1(xcalc, k1, b_siler, x0, x_cut, k2 = k2)
   rho2 <- usher3_rho2(xcalc, k1, k2, b_siler, x0, x_cut)
 
   # Treat NA as 0 in rho1 and rho2
@@ -922,7 +939,7 @@ sample_usher3 <- function(N, th, dx, xmax, x_mid = NA, infant_prop = NA,
   while (n_sampled < N) {
     x_samp <- runif(1, min = 0, max = x_lim)
     y_samp <- runif(1, min = 0, max = y_lim)
-    y1 <- usher3_rho1(x_samp, k1, b_siler, x0, x_cut)
+    y1 <- usher3_rho1(x_samp, k1, b_siler, x0, x_cut, k2 = k2)
     y2 <- usher3_rho2(x_samp, k1, k2, b_siler, x0, x_cut)
     # Treat NA as 0 in y1 and y2
     if (is.na(y1)) {

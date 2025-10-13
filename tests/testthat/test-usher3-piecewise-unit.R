@@ -193,16 +193,17 @@ b0 <- c(.175, 1.40, .368 * .01,
         .917 * .1)
 th0 <- c(2e-2, 1.2, b0)
 
-test_that("usher3_rho1 with x_cut = Inf matches original behavior", {
+test_that("usher3_rho1 with x_cut = Inf is calculated correctly", {
   k1 <- th0[1]
   b_siler <- th0[3:7]
   x <- c(0, 10, 25, 50)
   x0 <- 0
+  w0 <- c(1, 0)  # Everyone well at x0
   
   # Calculate with x_cut = Inf
-  rho1_inf <- usher3_rho1(x, k1, b_siler, x0, x_cut = Inf)
+  rho1_inf <- usher3_rho1(x, k1, b_siler, x0, x_cut = Inf, w = w0)
   
-  # Calculate expected (original formula)
+  # Calculate expected
   f13 <- dsiler(x, b_siler, x0)
   S12_expected <- exp(-k1 * (x - x0))
   rho1_expected <- f13 * S12_expected
@@ -215,14 +216,15 @@ test_that("usher3_rho1 with x_cut behaves correctly", {
   b_siler <- th0[3:7]
   x0 <- 0
   x_cut <- 6
+  w0 <- c(1, 0)  # Everyone well at x0
   
   # Before cutoff
   x_before <- c(3, 5, 6)
-  rho1_before <- usher3_rho1(x_before, k1, b_siler, x0, x_cut)
+  rho1_before <- usher3_rho1(x_before, k1, b_siler, x0, x_cut, w = w0)
   
   # After cutoff: rho1 should still be calculated, but with constant S12
   x_after <- c(10, 20, 50)
-  rho1_after <- usher3_rho1(x_after, k1, b_siler, x0, x_cut)
+  rho1_after <- usher3_rho1(x_after, k1, b_siler, x0, x_cut, w = w0)
   
   # Verify all are positive (valid density values)
   expect_true(all(rho1_before > 0))
@@ -233,12 +235,12 @@ test_that("usher3_rho1 with x_cut behaves correctly", {
   f13_test <- dsiler(x_test, b_siler, x0)
   S12_test <- exp(-k1 * (x_cut - x0))  # Should be constant after cutoff
   rho1_expected <- f13_test * S12_test
-  rho1_actual <- usher3_rho1(x_test, k1, b_siler, x0, x_cut)
+  rho1_actual <- usher3_rho1(x_test, k1, b_siler, x0, x_cut, w = w0)
   
   expect_equal(rho1_actual, rho1_expected, tolerance = 1e-10)
 })
 
-test_that("usher3_integrand with x_cut = Inf matches original behavior", {
+test_that("usher3_integrand with x_cut = Inf is calculated correctly", {
   k1 <- th0[1]
   k2 <- th0[2]
   b_siler <- th0[3:7]
@@ -247,7 +249,7 @@ test_that("usher3_integrand with x_cut = Inf matches original behavior", {
   # Calculate with x_cut = Inf
   integrand_inf <- usher3_integrand(y, k1, k2, b_siler, x_cut = Inf)
   
-  # Calculate expected (original formula)
+  # Calculate expected
   S12_expected <- exp(-k1 * y)
   S13_expected <- ssiler(y, b_siler)
   integrand_expected <- S12_expected * (S13_expected)^(1 - k2)
@@ -283,23 +285,23 @@ test_that("usher3_integrand with x_cut behaves correctly", {
   expect_equal(integrand_actual, integrand_expected, tolerance = 1e-10)
 })
 
-test_that("usher3_rho2 with x_cut = Inf matches original behavior", {
+test_that("usher3_rho2 with x_cut = Inf is calculated correctly", {
   k1 <- th0[1]
   k2 <- th0[2]
   b_siler <- th0[3:7]
   x <- c(10, 25, 50)
   x0 <- 0
+  w0 <- c(1, 0)  # Everyone well at x0
   
   # Calculate with x_cut = Inf
-  rho2_inf <- usher3_rho2(x, k1, k2, b_siler, x0, x_cut = Inf)
+  rho2_inf <- usher3_rho2(x, k1, k2, b_siler, x0, x_cut = Inf, w = w0)
   
   # Calculate expected using manual integration
   # (This is a complex integral, so we just verify it's finite and positive)
   expect_true(all(is.finite(rho2_inf)))
   expect_true(all(rho2_inf > 0))
   
-  # Also verify it matches rho2 calculated with the old approach by
-  # checking the integral term calculation
+  # Also verify using direct calculation of the integral term
   f13_0_x <- dsiler(x, b_siler)
   S13_0_x <- ssiler(x, b_siler)
   S12_0_x0 <- exp(-k1 * x0)
@@ -325,10 +327,11 @@ test_that("usher3_rho2 with x_cut produces valid densities", {
   b_siler <- th0[3:7]
   x0 <- 0
   x_cut <- 6
+  w0 <- c(1, 0)  # Everyone well at x0
   
   # Test at various ages
   x <- c(10, 20, 30, 50)
-  rho2 <- usher3_rho2(x, k1, k2, b_siler, x0, x_cut)
+  rho2 <- usher3_rho2(x, k1, k2, b_siler, x0, x_cut, w = w0)
   
   # Should all be finite and positive
   expect_true(all(is.finite(rho2)))
@@ -337,7 +340,7 @@ test_that("usher3_rho2 with x_cut produces valid densities", {
 
 # Tests for nll_usher3 with x_cut
 
-test_that("nll_usher3 with x_cut = Inf matches original behavior", {
+test_that("nll_usher3 with x_cut = Inf is calculated correctly", {
   x <- c(10, 20, 30, 40, 50)
   ill <- c(0, 1, 0, 1, 0)
   x0 <- 0
@@ -357,7 +360,7 @@ test_that("nll_usher3 with x_cut = Inf matches original behavior", {
   x_wll <- x[ill == 0]
   x_ill <- x[ill == 1]
   
-  rho1_wll <- usher3_rho1(x_wll, k1, b_siler, x0, x_cut = Inf)
+  rho1_wll <- usher3_rho1(x_wll, k1, b_siler, x0, x_cut = Inf, k2 = k2)
   rho2_ill <- usher3_rho2(x_ill, k1, k2, b_siler, x0, x_cut = Inf)
   
   ll_expected <- sum(log(rho1_wll)) + sum(log(rho2_ill))
@@ -387,7 +390,7 @@ test_that("nll_usher3 with x_cut produces valid likelihood", {
   x_wll <- x[ill == 0]
   x_ill <- x[ill == 1]
   
-  rho1_wll <- usher3_rho1(x_wll, k1, b_siler, x0, x_cut)
+  rho1_wll <- usher3_rho1(x_wll, k1, b_siler, x0, x_cut, k2 = k2)
   rho2_ill <- usher3_rho2(x_ill, k1, k2, b_siler, x0, x_cut)
   
   ll_expected <- sum(log(rho1_wll)) + sum(log(rho2_ill))

@@ -11,18 +11,32 @@ b0 = c(.175,
 th0 <- c(2e-2, 1.2, b0)
 
 test_that("usher3_rho1 returns correct density values", {
+  # Test with w = c(1, 0) (everyone well at x0)
+  w0 <- c(1, 0)
+  
   # Test cases with various age inputs
-  expect_equal(usher3_rho1(0, th0[1], th0[3:7]), dsiler(0, th0[3:7]) * exp(-th0[1] * 0), tolerance = 1e-8)
-  expect_equal(usher3_rho1(10, th0[1], th0[3:7]), dsiler(10, th0[3:7]) * exp(-th0[1] * 10), tolerance = 1e-8)
-  expect_equal(usher3_rho1(25, th0[1], th0[3:7]), dsiler(25, th0[3:7]) * exp(-th0[1] * 25), tolerance = 1e-8)
-  expect_equal(usher3_rho1(50, th0[1], th0[3:7]), dsiler(50, th0[3:7]) * exp(-th0[1] * 50), tolerance = 1e-8)
+  expect_equal(usher3_rho1(0, th0[1], th0[3:7], x0 = 0, w = w0), 
+               dsiler(0, th0[3:7]) * exp(-th0[1] * 0), tolerance = 1e-8)
+  expect_equal(usher3_rho1(10, th0[1], th0[3:7], x0 = 0, w = w0), 
+               dsiler(10, th0[3:7]) * exp(-th0[1] * 10), tolerance = 1e-8)
+  expect_equal(usher3_rho1(25, th0[1], th0[3:7], x0 = 0, w = w0), 
+               dsiler(25, th0[3:7]) * exp(-th0[1] * 25), tolerance = 1e-8)
+  expect_equal(usher3_rho1(50, th0[1], th0[3:7], x0 = 0, w = w0), 
+               dsiler(50, th0[3:7]) * exp(-th0[1] * 50), tolerance = 1e-8)
+  
+  # Test with w = NULL and x0 = 0 (should also give same results since calc_weights(0) = c(1,0))
+  expect_equal(usher3_rho1(10, th0[1], th0[3:7], x0 = 0, w = NULL, k2 = th0[2]), 
+               dsiler(10, th0[3:7]) * exp(-th0[1] * 10), tolerance = 1e-8)
 })
 
 test_that("usher3_rho2 returns correct density values", {
+  # Test with w = c(1, 0) (everyone well at x0)
+  w0 <- c(1, 0)
+  
   # Test cases with various age inputs
   x <- c(0, 10, 25, 50)
   for (i in seq_along(x)) {
-    expect_equal(usher3_rho2(x[i], th0[1], th0[2], th0[3:7]),
+    expect_equal(usher3_rho2(x[i], th0[1], th0[2], th0[3:7], x0 = 0, w = w0),
                  th0[1] * th0[2] * dsiler(x[i], th0[3:7]) *
                    ssiler(x[i], th0[3:7])^(th0[2] - 1) *
                    integrate(function(t) exp(-th0[1] * t) *
@@ -30,6 +44,15 @@ test_that("usher3_rho2 returns correct density values", {
                              0, x[i])$value,
                  tolerance = 1e-6)
   }
+  
+  # Test with w = NULL and x0 = 0 (should also give same results)
+  expect_equal(usher3_rho2(10, th0[1], th0[2], th0[3:7], x0 = 0, w = NULL),
+               th0[1] * th0[2] * dsiler(10, th0[3:7]) *
+                 ssiler(10, th0[3:7])^(th0[2] - 1) *
+                 integrate(function(t) exp(-th0[1] * t) *
+                             ssiler(t, th0[3:7])^(1 - th0[2]),
+                           0, 10)$value,
+               tolerance = 1e-6)
 })
 
 test_that("usher3_integrand returns correct values", {

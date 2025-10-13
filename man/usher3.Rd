@@ -7,9 +7,9 @@
 \alias{usher3_integrand}
 \title{Usher 3 Illness-Death Model Functions}
 \usage{
-usher3_rho1(x, k1, b_siler, x0 = 0, x_cut = Inf)
+usher3_rho1(x, k1, b_siler, x0 = 0, x_cut = Inf, w = NULL, k2 = NULL)
 
-usher3_rho2(x, k1, k2, b_siler, x0 = 0, x_cut = Inf)
+usher3_rho2(x, k1, k2, b_siler, x0 = 0, x_cut = Inf, w = NULL)
 
 usher3_integrand(y, k1, k2, b_siler, x_cut = Inf)
 }
@@ -25,6 +25,11 @@ usher3_integrand(y, k1, k2, b_siler, x_cut = Inf)
 \item{x_cut}{The age at which the well-to-ill transition hazard becomes
 zero [default: Inf]. When x_cut = Inf, this reduces to the standard
 constant hazard model.}
+
+\item{w}{Optional weight vector [w_1(x0), w_2(x0)]. If NULL (default), 
+weights are computed using calc_weights, which assumes disease etiology 
+unfolds from birth. To assume everyone starts in the well state at x0, 
+pass w = c(1, 0).}
 
 \item{k2}{The factor by which the mortality hazard out of the ill state is
 larger than that out of the healthy state}
