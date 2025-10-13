@@ -107,6 +107,267 @@ S12 <- function(x, k1, x0 = 0, x_cut = Inf) {
   return(exp(-H12(x, k1, x0, x_cut)))
 }
 
+#' Calculate the transition probability p_11(x0, x)
+#'
+#' This function computes the probability of remaining in the well state from
+#' age x0 to age x, accounting for both the well-to-ill transition (with
+#' cutoff) and the well-to-dead transition (baseline mortality).
+#'
+#' @param x The age at which to evaluate the transition probability
+#' @param k1 The constant transition rate from the healthy state to the ill
+#'   state (before x_cut)
+#' @param b_siler The parameter vector for the Siler hazard model (baseline
+#'   mortality)
+#' @param x0 The conditional starting age [default: 0]
+#' @param x_cut The age at which the well-to-ill transition hazard becomes
+#'   zero [default: Inf]. When x_cut = Inf, this reduces to the standard
+#'   constant hazard model.
+#'
+#' @return The transition probability p_11(x0, x)
+#'
+#' @details
+#' Computes the probability of staying in the well state from age x0 to age x.
+#' When x0 = 0, this is: p_11(0, x) = exp(-k1 * min(x_cut, x)) * S_13(0, x)
+#'
+#' This is the probability of staying in the well state, which requires 
+#' surviving both the well-to-ill transition and the baseline mortality hazard.
+#'
+#' @export
+p_11 <- function(x, k1, b_siler, x0 = 0, x_cut = Inf) {
+  if (x0 < 0) {
+    stop('x0 cannot be negative')
+  }
+  if (any(x < x0)) {
+    stop('x must be >= x0')
+  }
+  if (k1 < 0) {
+    stop('k1 cannot be negative')
+  }
+  
+  # S_13(x0, x) is the survival from baseline mortality
+  S13_x0_x <- ssiler(x, b_siler, x0 = x0)
+  
+  # Survival from well-to-ill transition from x0 to x
+  # Accumulate hazard only up to x_cut
+  if (x_cut <= x0) {
+    # No hazard after cutoff
+    S12_x0_x <- rep(1, length(x))
+  } else {
+    # Hazard accumulates from x0 to min(x, x_cut)
+    x_limit <- pmin(x_cut, x)
+    S12_x0_x <- exp(-k1 * (x_limit - x0))
+  }
+  
+  # Combined probability of staying in well state
+  return(S12_x0_x * S13_x0_x)
+}
+
+#' Integrand for p_12 calculation
+#'
+#' Helper function for computing the integral in p_12(x0, x).
+#'
+#' @param y The integration variable (age of illness onset)
+#' @param x0 The starting age
+#' @param k1 The constant transition rate from the healthy state to the ill
+#'   state
+#' @param k2 The factor by which the mortality hazard out of the ill state is
+#'   larger than that out of the healthy state
+#' @param b_siler The parameter vector for the Siler hazard model
+#'
+#' @return The integrand value at y
+#'
+#' @details
+#' The integrand is: exp(-k1 * (y - x0)) * [S_13(x0, y)]^(1 - k2)
+#'
+#' @keywords internal
+p_12_integrand <- function(y, x0, k1, k2, b_siler) {
+  S13_x0_y <- ssiler(y, b_siler, x0 = x0)
+  return(exp(-k1 * (y - x0)) * (S13_x0_y)^(1 - k2))
+}
+
+#' Calculate the transition probability p_12(x0, x)
+#'
+#' This function computes the probability of being in the ill state at age x,
+#' given that the individual started in the well state at age x0. This accounts
+#' for transitioning from well to ill at some intermediate age y and then
+#' surviving in the ill state to age x.
+#'
+#' @param x The age at which to evaluate the transition probability
+#' @param k1 The constant transition rate from the healthy state to the ill
+#'   state (before x_cut)
+#' @param k2 The factor by which the mortality hazard out of the ill state is
+#'   larger than that out of the healthy state
+#' @param b_siler The parameter vector for the Siler hazard model (baseline
+#'   mortality)
+#' @param x0 The conditional starting age [default: 0]
+#' @param x_cut The age at which the well-to-ill transition hazard becomes
+#'   zero [default: Inf]. When x_cut = Inf, this reduces to the standard
+#'   constant hazard model.
+#'
+#' @return The transition probability p_12(x0, x)
+#'
+#' @details
+#' Computes the probability of transitioning from well to ill between ages x0 
+#' and x. When x0 = 0: p_12(0, x) = k1 * [S_13(0, x)]^k2 * integral from 0 to 
+#' min(x_cut, x) of exp(-k1 * y) * [S_13(0, y)]^(1 - k2) dy
+#'
+#' The integral is computed numerically using R's integrate() function.
+#'
+#' @export
+p_12 <- function(x, k1, k2, b_siler, x0 = 0, x_cut = Inf) {
+  if (x0 < 0) {
+    stop('x0 cannot be negative')
+  }
+  if (any(x < x0)) {
+    stop('x must be >= x0')
+  }
+  if (k1 < 0) {
+    stop('k1 cannot be negative')
+  }
+  if (k2 < 0) {
+    stop('k2 cannot be negative')
+  }
+  
+  # Initialize result vector
+  result <- numeric(length(x))
+  
+  # Vectorized check: where x == x0, result is 0 (no time to transition)
+  is_at_x0 <- (x == x0)
+  result[is_at_x0] <- 0
+  
+  # Vectorized check: if starting after cutoff, no transitions can occur
+  if (x0 >= x_cut) {
+    return(result)  # All zeros
+  }
+  
+  # Vectorized check: where upper_limit <= x0, result is 0
+  upper_limits <- pmin(x_cut, x)
+  no_transition <- (upper_limits <= x0) | is_at_x0
+  
+  # Only process x values where transitions can occur
+  x_to_process <- x[!no_transition]
+  if (length(x_to_process) == 0) {
+    return(result)
+  }
+  
+  # Vectorized calculation of S_13(x0, x)^k2 for all x values to process
+  S13_x0_x <- ssiler(x_to_process, b_siler, x0 = x0)
+  S13_x0_x_k2 <- S13_x0_x^k2
+  
+  # Compute integrals (this part must be done iteratively since 
+  # each x value has a different upper limit)
+  indices_to_process <- which(!no_transition)
+  for (i in seq_along(indices_to_process)) {
+    idx <- indices_to_process[i]
+    upper_limit <- upper_limits[idx]
+    
+    # Compute the integral from x0 to upper_limit
+    integral_result <- tryCatch(
+      integrate(
+        p_12_integrand,
+        lower = x0,
+        upper = upper_limit,
+        x0 = x0,
+        k1 = k1,
+        k2 = k2,
+        b_siler = b_siler
+      )$value,
+      error = function(e) {
+        warning(paste("Integration failed in p_12 at x =", x[idx], ":", e$message))
+        return(NA)
+      }
+    )
+    
+    if (is.na(integral_result)) {
+      result[idx] <- NA
+    } else {
+      result[idx] <- k1 * S13_x0_x_k2[i] * integral_result
+    }
+  }
+  
+  return(result)
+}
+
+#' Calculate the state weights at age x0
+#'
+#' This function computes the proportion of living individuals who are in the
+#' well state (w_1) and ill state (w_2) at age x0, given that all individuals
+#' start in the well state at age 0. These weights reflect disease etiology
+#' from birth to age x0.
+#'
+#' @param x0 The age at which to calculate the weights
+#' @param k1 The constant transition rate from the healthy state to the ill
+#'   state (before x_cut)
+#' @param k2 The factor by which the mortality hazard out of the ill state is
+#'   larger than that out of the healthy state
+#' @param b_siler The parameter vector for the Siler hazard model (baseline
+#'   mortality)
+#' @param x_cut The age at which the well-to-ill transition hazard becomes
+#'   zero [default: Inf]. When x_cut = Inf, this reduces to the standard
+#'   constant hazard model.
+#'
+#' @return A vector of length 2 containing [w_1(x0), w_2(x0)], where:
+#'   w_1(x0) is the proportion of living individuals who are well at age x0
+#'   w_2(x0) is the proportion of living individuals who are ill at age x0
+#'
+#' @details
+#' Computes the state weights from birth (age 0) to age x0:
+#' w_1(x0) = p_11(0, x0) / [p_11(0, x0) + p_12(0, x0)]
+#' w_2(x0) = p_12(0, x0) / [p_11(0, x0) + p_12(0, x0)]
+#'
+#' These weights sum to 1 and represent the state distribution at age x0 for
+#' individuals who survive to that age, assuming all individuals start in the 
+#' well state at birth. They are used in calculating the weighted age-at-death 
+#' densities for analyses restricted to individuals who survive to age x0.
+#'
+#' At age 0, returns c(1, 0) since everyone starts in the well state.
+#'
+#' @examples
+#' # Example parameter values
+#' b_siler <- c(0.175, 1.40, 0.00368, 38.1, 0.0917)
+#' k1 <- 0.02
+#' k2 <- 1.2
+#' 
+#' # Calculate weights at age 10 (from birth)
+#' calc_weights(x0 = 10, k1 = k1, k2 = k2, b_siler = b_siler)
+#'
+#' @export
+calc_weights <- function(x0, k1, k2, b_siler, x_cut = Inf) {
+  if (x0 < 0) {
+    stop('x0 cannot be negative')
+  }
+  
+  # At age 0, everyone is in the well state
+  if (x0 == 0) {
+    return(c(w1 = 1, w2 = 0))
+  }
+  
+  # Calculate transition probabilities from age 0 to x0
+  p11_val <- p_11(x0, k1, b_siler, x0 = 0, x_cut)
+  p12_val <- p_12(x0, k1, k2, b_siler, x0 = 0, x_cut)
+  
+  # Check for integration failure
+  if (is.na(p12_val)) {
+    warning("Failed to compute p_12, returning NA weights")
+    return(c(w1 = NA, w2 = NA))
+  }
+  
+  # Total survival probability from age 0 to x0
+  total_survival <- p11_val + p12_val
+  
+  # Check for numerical issues
+  if (total_survival <= 0) {
+    warning("Total survival probability is non-positive, returning NA weights")
+    return(c(w1 = NA, w2 = NA))
+  }
+  
+  # Calculate weights (proportions)
+  w1 <- p11_val / total_survival
+  w2 <- p12_val / total_survival
+  
+  return(c(w1 = w1, w2 = w2))
+}
+
 #' @rdname usher3
 #' @param x The vector of ages
 #' @param k1 The transition rate from the healthy state to the ill state

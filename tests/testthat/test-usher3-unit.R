@@ -318,3 +318,176 @@ test_that("nll_usher3 handles x0 parameter correctly", {
   expect_true(is.numeric(nll_x0) && length(nll_x0) == 1)
   expect_false(is.infinite(nll_x0))
 })
+
+test_that("p_11 calculates transition probability correctly", {
+  # Test against analytical formula: p_11 = exp(-k1 * (x - x0)) * S_13(x0, x)
+  x_val <- 10
+  p11_computed <- p_11(x = x_val, k1 = th0[1], b_siler = th0[3:7])
+  S13_val <- ssiler(x_val, th0[3:7], x0 = 0)
+  p11_analytical <- exp(-th0[1] * x_val) * S13_val
+  expect_equal(p11_computed, p11_analytical, tolerance = 1e-10)
+  
+  # Test at age 0 (x = x0) - analytically should be 1
+  p11_0 <- p_11(x = 0, k1 = th0[1], b_siler = th0[3:7], x0 = 0)
+  expect_equal(p11_0, 1, tolerance = 1e-12)
+  
+  # Test that probability decreases with age
+  p11_20 <- p_11(x = 20, k1 = th0[1], b_siler = th0[3:7])
+  expect_true(p11_20 < p11_computed)
+  
+  # Test with x_cut - verify analytical formula for both cases
+  # Case 1: x > x_cut, so p_11 = exp(-k1 * x_cut) * S_13(0, x)
+  x_cut_val <- 5
+  p11_cut <- p_11(x = 10, k1 = th0[1], b_siler = th0[3:7], x_cut = x_cut_val)
+  S13_10 <- ssiler(10, th0[3:7], x0 = 0)
+  p11_cut_analytical <- exp(-th0[1] * x_cut_val) * S13_10
+  expect_equal(p11_cut, p11_cut_analytical, tolerance = 1e-10)
+  
+  # Case 2: x <= x_cut, so p_11 = exp(-k1 * x) * S_13(0, x)
+  p11_cut_3 <- p_11(x = 3, k1 = th0[1], b_siler = th0[3:7], x_cut = x_cut_val)
+  S13_3 <- ssiler(3, th0[3:7], x0 = 0)
+  p11_cut_3_analytical <- exp(-th0[1] * 3) * S13_3
+  expect_equal(p11_cut_3, p11_cut_3_analytical, tolerance = 1e-10)
+  
+  # Test with non-zero x0 - verify analytical formula
+  p11_5_to_10 <- p_11(x = 10, k1 = th0[1], b_siler = th0[3:7], x0 = 5)
+  S13_5_to_10 <- ssiler(10, th0[3:7], x0 = 5)
+  p11_5_to_10_analytical <- exp(-th0[1] * (10 - 5)) * S13_5_to_10
+  expect_equal(p11_5_to_10, p11_5_to_10_analytical, tolerance = 1e-10)
+  
+  # Test error handling
+  expect_error(p_11(x = 10, k1 = th0[1], b_siler = th0[3:7], x0 = -1), 
+               "x0 cannot be negative")
+  expect_error(p_11(x = 5, k1 = th0[1], b_siler = th0[3:7], x0 = 10), 
+               "x must be >= x0")
+  expect_error(p_11(x = 10, k1 = -0.01, b_siler = th0[3:7]), 
+               "k1 cannot be negative")
+})
+
+test_that("p_12 calculates transition probability correctly", {
+  # Test at x = x0 (analytically should be 0 - no time to transition)
+  p12_0 <- p_12(x = 0, k1 = th0[1], k2 = th0[2], b_siler = th0[3:7], x0 = 0)
+  expect_equal(p12_0, 0, tolerance = 1e-12)
+  
+  # Test analytical limit: when k1 = 0, p_12 should be 0 (no transitions)
+  p12_k1_zero <- p_12(x = 10, k1 = 0, k2 = th0[2], b_siler = th0[3:7])
+  expect_equal(p12_k1_zero, 0, tolerance = 1e-12)
+  
+  # Test analytical limit: when x_cut = 0, p_12 should be 0 (no transitions possible)
+  p12_xcut_zero <- p_12(x = 10, k1 = th0[1], k2 = th0[2], b_siler = th0[3:7], 
+                        x_cut = 0)
+  expect_equal(p12_xcut_zero, 0, tolerance = 1e-12)
+  
+  # Test that probability increases with age (more time to transition)
+  p12_5 <- p_12(x = 5, k1 = th0[1], k2 = th0[2], b_siler = th0[3:7])
+  p12_10 <- p_12(x = 10, k1 = th0[1], k2 = th0[2], b_siler = th0[3:7])
+  expect_true(p12_10 > p12_5)
+  
+  # Test with x_cut
+  p12_cut <- p_12(x = 10, k1 = th0[1], k2 = th0[2], b_siler = th0[3:7], 
+                  x_cut = 5)
+  p12_nocut <- p_12(x = 10, k1 = th0[1], k2 = th0[2], b_siler = th0[3:7], 
+                    x_cut = Inf)
+  expect_true(p12_cut < p12_nocut)  # Less hazard means fewer transitions
+  
+  # Verify p_12 is in valid range
+  p12_val <- p_12(x = 10, k1 = th0[1], k2 = th0[2], b_siler = th0[3:7])
+  expect_true(p12_val >= 0 && p12_val <= 1)
+  
+  # Test with non-zero x0
+  p12_5_to_10 <- p_12(x = 10, k1 = th0[1], k2 = th0[2], b_siler = th0[3:7], 
+                      x0 = 5)
+  expect_true(is.numeric(p12_5_to_10) && p12_5_to_10 >= 0 && p12_5_to_10 <= 1)
+  
+  # Test error handling
+  expect_error(p_12(x = 10, k1 = th0[1], k2 = th0[2], b_siler = th0[3:7], 
+                    x0 = -1), 
+               "x0 cannot be negative")
+  expect_error(p_12(x = 5, k1 = th0[1], k2 = th0[2], b_siler = th0[3:7], 
+                    x0 = 10), 
+               "x must be >= x0")
+  expect_error(p_12(x = 10, k1 = -0.01, k2 = th0[2], b_siler = th0[3:7]), 
+               "k1 cannot be negative")
+  expect_error(p_12(x = 10, k1 = th0[1], k2 = -0.5, b_siler = th0[3:7]), 
+               "k2 cannot be negative")
+})
+
+test_that("calc_weights calculates state weights correctly", {
+  # Test at age 0 (analytically should be c(1, 0) - everyone well)
+  weights_0 <- calc_weights(x0 = 0, k1 = th0[1], k2 = th0[2], 
+                            b_siler = th0[3:7])
+  expect_equal(as.numeric(weights_0[1]), 1, tolerance = 1e-12)
+  expect_equal(as.numeric(weights_0[2]), 0, tolerance = 1e-12)
+  
+  # Test analytical limit: when k1 = 0, weights should be c(1, 0) at any age
+  weights_k1_zero <- calc_weights(x0 = 10, k1 = 0, k2 = th0[2], 
+                                  b_siler = th0[3:7])
+  expect_equal(as.numeric(weights_k1_zero[1]), 1, tolerance = 1e-12)
+  expect_equal(as.numeric(weights_k1_zero[2]), 0, tolerance = 1e-12)
+  
+  # Test analytical limit: when x_cut = 0, weights should be c(1, 0) at any age
+  weights_xcut_zero <- calc_weights(x0 = 10, k1 = th0[1], k2 = th0[2], 
+                                    b_siler = th0[3:7], x_cut = 0)
+  expect_equal(as.numeric(weights_xcut_zero[1]), 1, tolerance = 1e-12)
+  expect_equal(as.numeric(weights_xcut_zero[2]), 0, tolerance = 1e-12)
+  
+  # Test that weights are computed from p_11 and p_12 using analytical formula
+  # w_i = p_1i / (p_11 + p_12)
+  x0_val <- 10
+  weights <- calc_weights(x0 = x0_val, k1 = th0[1], k2 = th0[2], 
+                          b_siler = th0[3:7])
+  p11 <- p_11(x = x0_val, k1 = th0[1], b_siler = th0[3:7], x0 = 0)
+  p12 <- p_12(x = x0_val, k1 = th0[1], k2 = th0[2], b_siler = th0[3:7], x0 = 0)
+  expected_w1 <- p11 / (p11 + p12)
+  expected_w2 <- p12 / (p11 + p12)
+  expect_equal(as.numeric(weights[1]), expected_w1, tolerance = 1e-10)
+  expect_equal(as.numeric(weights[2]), expected_w2, tolerance = 1e-10)
+  
+  # Test that weights sum to 1 (mathematical constraint)
+  expect_equal(sum(weights), 1, tolerance = 1e-12)
+  
+  # Test that w1 decreases and w2 increases with age
+  weights_5 <- calc_weights(x0 = 5, k1 = th0[1], k2 = th0[2], 
+                            b_siler = th0[3:7])
+  weights_10 <- calc_weights(x0 = 10, k1 = th0[1], k2 = th0[2], 
+                             b_siler = th0[3:7])
+  expect_true(weights_10[1] < weights_5[1])  # w1 decreases
+  expect_true(weights_10[2] > weights_5[2])  # w2 increases
+  
+  # Test with x_cut - after cutoff, w1 should decrease more slowly
+  weights_cut_5 <- calc_weights(x0 = 5, k1 = th0[1], k2 = th0[2], 
+                                b_siler = th0[3:7], x_cut = 3)
+  weights_nocut_5 <- calc_weights(x0 = 5, k1 = th0[1], k2 = th0[2], 
+                                  b_siler = th0[3:7], x_cut = Inf)
+  expect_true(weights_cut_5[1] > weights_nocut_5[1])  # More stay well with cutoff
+  
+  # Test error handling
+  expect_error(calc_weights(x0 = -1, k1 = th0[1], k2 = th0[2], 
+                            b_siler = th0[3:7]), 
+               "x0 cannot be negative")
+})
+
+test_that("p_12_integrand calculates integrand correctly", {
+  # Test against analytical formula: exp(-k1 * (y - x0)) * [S_13(x0, y)]^(1 - k2)
+  y_val <- 5
+  x0_val <- 0
+  integrand_val <- p_12_integrand(y = y_val, x0 = x0_val, k1 = th0[1], 
+                                  k2 = th0[2], b_siler = th0[3:7])
+  S13_0_y <- ssiler(y_val, th0[3:7], x0 = x0_val)
+  expected_val <- exp(-th0[1] * (y_val - x0_val)) * (S13_0_y)^(1 - th0[2])
+  expect_equal(integrand_val, expected_val, tolerance = 1e-12)
+  
+  # Test at y = x0 (analytically should be 1^(1 - k2) = 1 if k2 ≠ 1)
+  integrand_x0 <- p_12_integrand(y = 0, x0 = 0, k1 = th0[1], k2 = th0[2], 
+                                 b_siler = th0[3:7])
+  expect_equal(integrand_x0, 1^(1 - th0[2]), tolerance = 1e-12)
+  
+  # Test with non-zero x0 - verify analytical formula
+  y_val_2 <- 8
+  x0_val_2 <- 5
+  integrand_val_5 <- p_12_integrand(y = y_val_2, x0 = x0_val_2, k1 = th0[1], 
+                                    k2 = th0[2], b_siler = th0[3:7])
+  S13_5_8 <- ssiler(y_val_2, th0[3:7], x0 = x0_val_2)
+  expected_val_5 <- exp(-th0[1] * (y_val_2 - x0_val_2)) * (S13_5_8)^(1 - th0[2])
+  expect_equal(integrand_val_5, expected_val_5, tolerance = 1e-12)
+})
