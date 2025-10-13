@@ -491,3 +491,111 @@ test_that("p_12_integrand calculates integrand correctly", {
   expected_val_5 <- exp(-th0[1] * (y_val_2 - x0_val_2)) * (S13_5_8)^(1 - th0[2])
   expect_equal(integrand_val_5, expected_val_5, tolerance = 1e-12)
 })
+
+test_that("q_1 calculates occupancy probability correctly", {
+  # Test with x0 = 0 (w1 = 1, w2 = 0)
+  w0 <- c(1, 0)
+  x_vals <- c(5, 10, 15)
+  
+  # When x0 = 0 and w = c(1, 0), q_1 should equal p_11(0, x)
+  q1_vals <- q_1(x = x_vals, w = w0, k1 = th0[1], b_siler = th0[3:7], 
+                 x0 = 0, x_cut = Inf)
+  p11_vals <- p_11(x = x_vals, k1 = th0[1], b_siler = th0[3:7], 
+                   x0 = 0, x_cut = Inf)
+  expect_equal(q1_vals, p11_vals, tolerance = 1e-10)
+  
+  # Test analytical formula: q_1 = w_1 * exp(-k1*(x-x0)) * S_13(0,x) / S_13(0,x0)
+  x0_val <- 5
+  w <- calc_weights(x0 = x0_val, k1 = th0[1], k2 = th0[2], b_siler = th0[3:7])
+  x_val <- 15
+  q1_computed <- q_1(x = x_val, w = w, k1 = th0[1], b_siler = th0[3:7], 
+                     x0 = x0_val, x_cut = Inf)
+  
+  S13_0_x <- ssiler(x_val, th0[3:7], x0 = 0)
+  S13_0_x0 <- ssiler(x0_val, th0[3:7], x0 = 0)
+  q1_analytical <- as.numeric(w[1]) * exp(-th0[1] * (x_val - x0_val)) * S13_0_x / S13_0_x0
+  expect_equal(q1_computed, q1_analytical, tolerance = 1e-10)
+  
+  # Test with finite x_cut, Case 2: x0 < x_cut < x
+  x_cut_val <- 10
+  x_val <- 15
+  x0_val <- 5
+  q1_cut <- q_1(x = x_val, w = w, k1 = th0[1], b_siler = th0[3:7], 
+                x0 = x0_val, x_cut = x_cut_val)
+  S13_0_x <- ssiler(x_val, th0[3:7], x0 = 0)
+  S13_0_x0 <- ssiler(x0_val, th0[3:7], x0 = 0)
+  q1_cut_analytical <- as.numeric(w[1]) * exp(-th0[1] * (x_cut_val - x0_val)) * S13_0_x / S13_0_x0
+  expect_equal(q1_cut, q1_cut_analytical, tolerance = 1e-10)
+  
+  # Test that q_1 can compute weights automatically if not provided
+  q1_auto <- q_1(x = 10, w = NULL, k1 = th0[1], b_siler = th0[3:7], 
+                 x0 = 0, x_cut = Inf, k2 = th0[2])
+  expect_true(is.numeric(q1_auto) && q1_auto >= 0)
+  
+  # Test error handling
+  expect_error(q_1(x = 10, w = w0, k1 = th0[1], b_siler = th0[3:7], x0 = -1), 
+               "x0 cannot be negative")
+  expect_error(q_1(x = 5, w = w0, k1 = th0[1], b_siler = th0[3:7], x0 = 10), 
+               "x must be >= x0")
+})
+
+test_that("q_2 calculates occupancy probability correctly", {
+  # Test with x0 = 0 (w1 = 1, w2 = 0)
+  # When w2 = 0, only the integral term contributes
+  w0 <- c(1, 0)
+  x_val <- 10
+  
+  q2_computed <- q_2(x = x_val, w = w0, k1 = th0[1], k2 = th0[2], 
+                     b_siler = th0[3:7], x0 = 0, x_cut = Inf)
+  expect_true(is.numeric(q2_computed) && q2_computed >= 0)
+  
+  # Test analytical limit: when k1 = 0, no transitions, so q_2 = w_2 * S_23
+  x0_val <- 5
+  w_k1_zero <- calc_weights(x0 = x0_val, k1 = 0, k2 = th0[2], 
+                            b_siler = th0[3:7])
+  # w_k1_zero should be c(1, 0)
+  q2_k1_zero <- q_2(x = 10, w = w_k1_zero, k1 = 0, k2 = th0[2], 
+                    b_siler = th0[3:7], x0 = x0_val)
+  expect_equal(q2_k1_zero, 0, tolerance = 1e-10)  # w2 = 0, no integral
+  
+  # Test that q_1 + q_2 represents total survival from x0 to x
+  x0_val <- 5
+  x_val <- 15
+  w <- calc_weights(x0 = x0_val, k1 = th0[1], k2 = th0[2], b_siler = th0[3:7])
+  q1 <- q_1(x = x_val, w = w, k1 = th0[1], b_siler = th0[3:7], 
+            x0 = x0_val, x_cut = Inf)
+  q2 <- q_2(x = x_val, w = w, k1 = th0[1], k2 = th0[2], b_siler = th0[3:7], 
+            x0 = x0_val, x_cut = Inf)
+  
+  # Total occupancy should be <= 1
+  total_occupancy <- q1 + q2
+  expect_true(total_occupancy <= 1 && total_occupancy >= 0)
+  
+  # Test that q_2 can compute weights automatically if not provided
+  q2_auto <- q_2(x = 10, w = NULL, k1 = th0[1], k2 = th0[2], 
+                 b_siler = th0[3:7], x0 = 0, x_cut = Inf)
+  expect_true(is.numeric(q2_auto) && q2_auto >= 0)
+  
+  # Test vectorization
+  q2_vec <- q_2(x = c(10, 15, 20), w = w0, k1 = th0[1], k2 = th0[2], 
+                b_siler = th0[3:7], x0 = 0, x_cut = Inf)
+  expect_equal(length(q2_vec), 3)
+  expect_true(all(q2_vec >= 0))
+  
+  # Test error handling
+  expect_error(q_2(x = 10, w = w0, k1 = th0[1], k2 = th0[2], 
+                   b_siler = th0[3:7], x0 = -1), 
+               "x0 cannot be negative")
+})
+
+test_that("q_2_integrand calculates integrand correctly", {
+  # Test against analytical formula: exp(-k1 * (y - x0)) * [S_13(0, y)]^(1 - k2)
+  # This is the same as p_12_integrand, so should give same results
+  y_val <- 5
+  x0_val <- 0
+  integrand_q2 <- q_2_integrand(y = y_val, x0 = x0_val, k1 = th0[1], 
+                                k2 = th0[2], b_siler = th0[3:7])
+  integrand_p12 <- p_12_integrand(y = y_val, x0 = x0_val, k1 = th0[1], 
+                                  k2 = th0[2], b_siler = th0[3:7])
+  expect_equal(integrand_q2, integrand_p12, tolerance = 1e-12)
+})

@@ -368,6 +368,215 @@ calc_weights <- function(x0, k1, k2, b_siler, x_cut = Inf) {
   return(c(w1 = w1, w2 = w2))
 }
 
+#' Calculate the occupancy probability q_1(x0, x; w)
+#'
+#' This function computes the probability of being in state 1 (well) at age x,
+#' given the state weights at age x0. This accounts for survival from x0 to x
+#' while remaining in the well state.
+#'
+#' @param x The age at which to evaluate the occupancy probability (can be vector)
+#' @param w A vector of length 2 containing [w_1(x0), w_2(x0)], the state 
+#'   weights at age x0. If NULL, computed using calc_weights.
+#' @param k1 The constant transition rate from the healthy state to the ill
+#'   state (before x_cut)
+#' @param b_siler The parameter vector for the Siler hazard model (baseline
+#'   mortality)
+#' @param x0 The starting age (default: 0)
+#' @param x_cut The age at which the well-to-ill transition hazard becomes
+#'   zero [default: Inf]
+#' @param k2 Optional k2 parameter (only needed if w is NULL)
+#'
+#' @return The occupancy probability q_1(x0, x; w) evaluated at x
+#'
+#' @details
+#' Computes the occupancy probability based on three cases:
+#' - Case x_cut <= x0 <= x: q_1 = w_1(x0) * S_13(0,x) / S_13(0,x0)
+#' - Case x0 <= x_cut <= x: q_1 = w_1(x0) * exp(-k1*(x_cut - x0)) * S_13(0,x) / S_13(0,x0)
+#' - Case x0 <= x <= x_cut: q_1 = w_1(x0) * exp(-k1*(x - x0)) * S_13(0,x) / S_13(0,x0)
+#'
+#' @export
+q_1 <- function(x, w, k1, b_siler, x0 = 0, x_cut = Inf, k2 = NULL) {
+  if (x0 < 0) {
+    stop('x0 cannot be negative')
+  }
+  if (any(x < x0)) {
+    stop('x must be >= x0')
+  }
+  if (k1 < 0) {
+    stop('k1 cannot be negative')
+  }
+  
+  # If w is not provided, calculate it
+  if (is.null(w)) {
+    if (is.null(k2)) {
+      stop('k2 must be provided if w is NULL')
+    }
+    w <- calc_weights(x0, k1, k2, b_siler, x_cut)
+  }
+  
+  w1 <- w[1]
+  
+  # Vectorized calculation
+  result <- numeric(length(x))
+  
+  # S_13(0, x) / S_13(0, x0) term (vectorized)
+  S13_0_x <- ssiler(x, b_siler, x0 = 0)
+  S13_0_x0 <- ssiler(x0, b_siler, x0 = 0)
+  S13_ratio <- S13_0_x / S13_0_x0
+  
+  # Determine which case applies for each x value
+  # Case 1: x_cut <= x0 <= x (no hazard from x0 to x)
+  case1 <- (x_cut <= x0)
+  
+  # Case 2: x0 <= x_cut <= x (hazard from x0 to x_cut, then none)
+  case2 <- (x0 < x_cut) & (x >= x_cut)
+  
+  # Case 3: x0 <= x <= x_cut (hazard throughout)
+  case3 <- (x0 < x_cut) & (x < x_cut)
+  
+  # Case 1: no transitions possible
+  result[case1] <- w1 * S13_ratio[case1]
+  
+  # Case 2: transitions from x0 to x_cut
+  result[case2] <- w1 * exp(-k1 * (x_cut - x0)) * S13_ratio[case2]
+  
+  # Case 3: transitions from x0 to x
+  result[case3] <- w1 * exp(-k1 * (x[case3] - x0)) * S13_ratio[case3]
+  
+  return(result)
+}
+
+#' Integrand for q_2 calculation
+#'
+#' Helper function for computing the integral in q_2(x0, x; w).
+#'
+#' @param y The integration variable (age of illness onset)
+#' @param x0 The starting age
+#' @param k1 The constant transition rate from the healthy state to the ill state
+#' @param k2 The factor by which the mortality hazard out of the ill state is
+#'   larger than that out of the healthy state
+#' @param b_siler The parameter vector for the Siler hazard model
+#'
+#' @return The integrand value at y
+#'
+#' @keywords internal
+q_2_integrand <- function(y, x0, k1, k2, b_siler) {
+  S13_0_y <- ssiler(y, b_siler, x0 = 0)
+  return(exp(-k1 * (y - x0)) * (S13_0_y)^(1 - k2))
+}
+
+#' Calculate the occupancy probability q_2(x0, x; w)
+#'
+#' This function computes the probability of being in state 2 (ill) at age x,
+#' given the state weights at age x0. This accounts for individuals who were
+#' already ill at x0 and survived, plus individuals who transitioned from well
+#' to ill between x0 and x.
+#'
+#' @param x The age at which to evaluate the occupancy probability (can be vector)
+#' @param w A vector of length 2 containing [w_1(x0), w_2(x0)], the state 
+#'   weights at age x0. If NULL, computed using calc_weights.
+#' @param k1 The constant transition rate from the healthy state to the ill
+#'   state (before x_cut)
+#' @param k2 The factor by which the mortality hazard out of the ill state is
+#'   larger than that out of the healthy state
+#' @param b_siler The parameter vector for the Siler hazard model (baseline
+#'   mortality)
+#' @param x0 The starting age (default: 0)
+#' @param x_cut The age at which the well-to-ill transition hazard becomes
+#'   zero [default: Inf]
+#'
+#' @return The occupancy probability q_2(x0, x; w) evaluated at x
+#'
+#' @details
+#' Computes the occupancy probability based on three cases with integral terms
+#' for individuals transitioning from well to ill between x0 and min(x, x_cut).
+#'
+#' @export
+q_2 <- function(x, w, k1, k2, b_siler, x0 = 0, x_cut = Inf) {
+  if (x0 < 0) {
+    stop('x0 cannot be negative')
+  }
+  if (any(x < x0)) {
+    stop('x must be >= x0')
+  }
+  if (k1 < 0) {
+    stop('k1 cannot be negative')
+  }
+  if (k2 < 0) {
+    stop('k2 cannot be negative')
+  }
+  
+  # If w is not provided, calculate it
+  if (is.null(w)) {
+    w <- calc_weights(x0, k1, k2, b_siler, x_cut)
+  }
+  
+  w1 <- w[1]
+  w2 <- w[2]
+  
+  # Initialize result vector
+  result <- numeric(length(x))
+  
+  # Common terms
+  S13_0_x0 <- ssiler(x0, b_siler, x0 = 0)
+  
+  # Process each x value
+  for (i in seq_along(x)) {
+    x_val <- x[i]
+    
+    # S_13 terms
+    S13_0_x <- ssiler(x_val, b_siler, x0 = 0)
+    S13_ratio_k2 <- (S13_0_x / S13_0_x0)^k2
+    
+    # First term: individuals already ill at x0
+    term1 <- w2 * S13_ratio_k2
+    
+    # Second term: individuals transitioning from well to ill
+    # Determine integration limits based on case
+    if (x_cut <= x0) {
+      # Case 1: no transitions possible
+      upper_limit <- x0  # No integration
+    } else if (x_val >= x_cut) {
+      # Case 2: integrate from x0 to x_cut
+      upper_limit <- x_cut
+    } else {
+      # Case 3: integrate from x0 to x
+      upper_limit <- x_val
+    }
+    
+    # Compute integral if there's a range to integrate over
+    if (upper_limit > x0) {
+      integral_result <- tryCatch(
+        integrate(
+          q_2_integrand,
+          lower = x0,
+          upper = upper_limit,
+          x0 = x0,
+          k1 = k1,
+          k2 = k2,
+          b_siler = b_siler
+        )$value,
+        error = function(e) {
+          warning(paste("Integration failed in q_2 at x =", x_val, ":", e$message))
+          return(NA)
+        }
+      )
+      
+      if (is.na(integral_result)) {
+        result[i] <- NA
+      } else {
+        term2 <- w1 * k1 * (S13_0_x^k2) / S13_0_x0 * integral_result
+        result[i] <- term1 + term2
+      }
+    } else {
+      # No transitions, only term1
+      result[i] <- term1
+    }
+  }
+  
+  return(result)
+}
+
 #' @rdname usher3
 #' @param x The vector of ages
 #' @param k1 The transition rate from the healthy state to the ill state
