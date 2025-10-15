@@ -471,17 +471,21 @@ test_that("nll_usher3 likelihood changes with x_cut", {
   expect_false(isTRUE(all.equal(nll_6, nll_12)))
 })
 
-test_that("usher3_hessian raises error with finite x_cut", {
+test_that("usher3_hessian works with finite x_cut", {
   x <- c(10, 20, 30, 40, 50)
   ill <- c(0, 1, 0, 1, 0)
   x0 <- 0
   x_cut <- 6
   
-  # Should raise an error because finite x_cut is not yet supported
-  expect_error(
-    usher3_hessian(th0, x, ill, x0, x_cut),
-    "Finite x_cut is not yet supported"
-  )
+  # Should work with finite x_cut
+  H <- usher3_hessian(th0, x, ill, x0, x_cut)
+  
+  # Should be a matrix
+  expect_true(is.matrix(H))
+  
+  # Should have correct dimensions (7x7 for full parameter vector)
+  expect_equal(nrow(H), 7)
+  expect_equal(ncol(H), 7)
 })
 
 test_that("usher3_hessian works with x_cut = Inf", {
@@ -502,17 +506,58 @@ test_that("usher3_hessian works with x_cut = Inf", {
   expect_false(anyNA(H))
 })
 
-test_that("usher3_errors raises error with finite x_cut", {
+test_that("usher3_errors works with finite x_cut", {
   x <- c(10, 20, 30, 40, 50)
   ill <- c(0, 1, 0, 1, 0)
   x0 <- 0
   x_cut <- 6
   
-  # Should raise an error because finite x_cut is not yet supported
-  expect_error(
-    usher3_errors(th0, x, ill, x0, x_cut),
-    "Finite x_cut is not yet supported"
-  )
+  # Should work with finite x_cut
+  # We suppress warnings and only check structural properties
+  suppressWarnings({
+    errors <- usher3_errors(th0, x, ill, x0, x_cut)
+  })
+  
+  expect_true(is.data.frame(errors))
+  expect_equal(nrow(errors), 7)
+  expect_true(all(c("Estimate", "StandErr", "z", "pval", "against", "sideAdj") %in% names(errors)))
+})
+
+test_that("usher3_gradient works with finite x_cut", {
+  x <- c(10, 20, 30, 40, 50)
+  ill <- c(0, 1, 0, 1, 0)
+  x0 <- 0
+  x_cut <- 6
+  
+  # Should work with finite x_cut
+  grad <- usher3_gradient(th0, x, ill, x0, x_cut)
+  
+  # Should be a numeric vector
+  expect_true(is.numeric(grad))
+  
+  # Should have correct length (7 for full parameter vector)
+  expect_equal(length(grad), 7)
+  
+  # Should not contain NA values
+  expect_false(anyNA(grad))
+})
+
+test_that("usher3_gradient works with x_cut = Inf", {
+  x <- c(10, 20, 30, 40, 50)
+  ill <- c(0, 1, 0, 1, 0)
+  x0 <- 0
+  
+  # With x_cut = Inf (default), should work
+  grad <- usher3_gradient(th0, x, ill, x0, x_cut = Inf)
+  
+  # Should be a numeric vector
+  expect_true(is.numeric(grad))
+  
+  # Should have correct length (7 for full parameter vector)
+  expect_equal(length(grad), 7)
+  
+  # Should not contain NA values
+  expect_false(anyNA(grad))
 })
 
 test_that("usher3_errors works with x_cut = Inf", {

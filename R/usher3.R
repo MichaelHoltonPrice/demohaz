@@ -741,17 +741,31 @@ nll_usher3 <- function(theta, x, ill, x0 = 0, x_cut = Inf) {
 #'
 #' @export
 usher3_hessian <- function(theta, x, ill, x0 = 0, x_cut = Inf) {
-  # Finite x_cut not yet supported for Hessian calculation
-  if (is.finite(x_cut)) {
-    stop("Finite x_cut is not yet supported for usher3_hessian. ",
-         "Use x_cut = Inf (the default).")
-  }
-  
   H <- numDeriv::hessian(nll_usher3_hessian_wrapper,
                          theta, method.args = list(eps = 1e-12),
                          ageVect = x,
                          illVect = ill, x0 = x0, x_cut = x_cut)
   return(H)
+}
+
+#' Calculate the gradient of the negative log-likelihood for the Usher 3 model
+#'
+#' @param theta The parameter vector for the Usher illness-death model
+#' @param x The vector of ages-at-death
+#' @param ill The vector of illness indicators
+#' @param x0 Conditional starting age [default: 0]
+#' @param x_cut The age at which the well-to-ill transition hazard becomes
+#'   zero [default: Inf]
+#'
+#' @return The gradient vector
+#'
+#' @export
+usher3_gradient <- function(theta, x, ill, x0 = 0, x_cut = Inf) {
+  grad_vec <- numDeriv::grad(nll_usher3_hessian_wrapper,
+                             theta, method.args = list(eps = 1e-12),
+                             ageVect = x,
+                             illVect = ill, x0 = x0, x_cut = x_cut)
+  return(grad_vec)
 }
 
 #' Wrapper function for the negative log-likelihood of the Usher 3 model
@@ -783,12 +797,6 @@ nll_usher3_hessian_wrapper <- function(paramVect, ageVect, illVect, x0 = 0,
 #'
 #' @export
 usher3_errors <- function(theta, x, ill, x0 = 0, x_cut = Inf) {
-  # Finite x_cut not yet supported for error estimation
-  if (is.finite(x_cut)) {
-    stop("Finite x_cut is not yet supported for usher3_errors. ",
-         "Use x_cut = Inf (the default).")
-  }
-  
   H <- usher3_hessian(theta, x, ill, x0, x_cut)
   against <- c(0, 1, 0, 0, 0, 0, 0)
   sideAdjustment <- c(1, 2, 1, 1, 1, 1, 1)
