@@ -974,7 +974,7 @@ sample_usher3 <- function(N, th, dx, xmax, x_mid = NA, infant_prop = NA,
 
 nll_usher3_optim_wrapper <- function(th_bar, ...) {
   # A wrapper function use as the objective function for
-  # temper_usher3
+  # temper_and_tune_usher3
   th <- exp(th_bar)
   return(nll_usher3(th, ...))
 }
@@ -998,20 +998,22 @@ nll_usher3_optim_wrapper <- function(th_bar, ...) {
 #' @param temp_vect The temperature vector for tempering
 #'   [default: 10^(rev(seq(-1, 1, by = 0.25)))]
 #' @param prop_scale_mat The proposal scaling matrix [default: NULL]
-#' @param lr The learning rate for gradient descent [default: 1e-5]
 #' @param func_tol The tolerance for the objective function [default: 1e-6]
 #' @param miniter The minimum number of iterations [default: 1]
 #' @param maxiter The maximum number of iterations [default: 1000]
 #' @param report_period The reporting period for verbose output [default: 50]
 #' @param use_gompertz Whether to use Gompert-Makeham mortality [default: FAlSE]
+#' @param tune Whether to perform Nelder-Mead tuning after tempering [default: TRUE]
+#' @param control Control parameters for optim() when tune=TRUE 
+#'   [default: list(maxit = 10000)]. See ?optim for available options.
 #' @param ... Additional arguments passed to obj_fun, including x (ages), 
-#'   ill (illness indicators), x0 (conditional starting age, default 0), and
-#'   x_cut (age cutoff for transitions, default Inf)
+#'   ill (illness indicators), x0 (conditional starting age, default 0), 
+#'   and x_cut (age cutoff for transitions, default Inf)
 #'
 #' @return A list containing the results of tempering and tuning
 #'
 #' @export
-temper_usher3 <- function(th0 = c(1e-2,
+temper_and_tune_usher3 <- function(th0 = c(1e-2,
                                   1.0,
                                   0.175,
                                   1.40,
@@ -1022,10 +1024,11 @@ temper_usher3 <- function(th0 = c(1e-2,
                           fn_plot = NULL, num_cyc = 100,
                           samps_per_cyc = 20,
                           temp_vect = 10^(rev(seq(-1, 1, by = 0.25))),
-                          prop_scale_mat = NULL, lr = 1e-5,
+                          prop_scale_mat = NULL,
                           func_tol = 1e-6, miniter = 1,
                           maxiter = 1000, report_period = 50,
-                          use_gompertz=FALSE, ...) {
+                          use_gompertz=FALSE, tune=TRUE, 
+                          control = list(maxit = 10000), ...) {
   obj_fun <- nll_usher3_optim_wrapper
   if (!use_gompertz) {
     if (length(th0) != 7) {
@@ -1048,8 +1051,9 @@ temper_usher3 <- function(th0 = c(1e-2,
   optional_inputs <- list(verbose = verbose, fn_plot = fn_plot,
                           num_cyc = num_cyc, samps_per_cyc = samps_per_cyc,
                           temp_vect = temp_vect, prop_scale_mat = prop_scale_mat,
-                          lr = lr, func_tol = func_tol, miniter = miniter,
-                          maxiter = maxiter, report_period = report_period)
+                          func_tol = func_tol, miniter = miniter,
+                          maxiter = maxiter, report_period = report_period,
+                          tune = tune)
 
   if (is.null(prop_scale_mat)) {
     just_scale <- t(replicate(num_param,
@@ -1083,11 +1087,39 @@ temper_usher3 <- function(th0 = c(1e-2,
     print(temper$chains[[n]]$eta_best)
   }
 
-  # TODO: for now return just the result of the tempering;
-  #       need to identify a good approach for tuning
-  #       (see TODO above regarding the gradient).
-  return(list(obj_fun = obj_fun, th0 = th0, optional_inputs = optional_inputs,
-              temper = temper, th_temper = th_temper, th = th_temper))
+  # Tune using Nelder-Mead optimization on the unconstrained parameterization
+  if (tune) {
+    if (verbose) {
+      print('Starting Nelder-Mead tuning...')
+    }
+    
+    optim_result <- optim(par = th_bar_temper, fn = obj_fun, 
+                          method = "Nelder-Mead", control = control, ...)
+    
+    th_bar <- optim_result$par
+    th <- exp(th_bar)
+    
+    if (verbose) {
+      print('Best parameter vector after tuning (th):')
+      print(th)
+      print('Best parameter vector after tuning (th_bar):')
+      print(th_bar)
+      print('The corresponding best value of the objective function:')
+      print(optim_result$value)
+      print('Number of function evaluations:')
+      print(optim_result$counts)
+      print('Convergence code:')
+      print(optim_result$convergence)
+    }
+    
+    return(list(obj_fun = obj_fun, th0 = th0, optional_inputs = optional_inputs,
+                temper = temper, th_temper = th_temper, 
+                optim_result = optim_result, th_bar = th_bar, th = th))
+  } else {
+    # Return tempered results without tuning
+    return(list(obj_fun = obj_fun, th0 = th0, optional_inputs = optional_inputs,
+                temper = temper, th_temper = th_temper, th = th_temper))
+  }
 }
 
 #' Calculate trapezoidal integration weights

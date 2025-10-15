@@ -1,4 +1,4 @@
 library(testthat)
-library(yada)
+library(demohaz)
 
-test_check("yada")
+test_check("demohaz")

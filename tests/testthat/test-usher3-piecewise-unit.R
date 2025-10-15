@@ -570,36 +570,41 @@ test_that("sample_usher3 raises error with finite x_cut", {
   )
 })
 
-# Tests for temper_usher3 with x_cut
+# Tests for temper_and_tune_usher3 with x_cut (tempering only)
 
-test_that("temper_usher3 with x_cut runs without error", {
+test_that("temper_and_tune_usher3 with x_cut and tune=FALSE runs without error", {
   x <- c(10, 20, 30, 40, 50)
   ill <- c(0, 1, 0, 1, 0)
   x0 <- 0
   x_cut <- 6
   
-  # Test with very few cycles for speed
-  results <- temper_usher3(th0, x = x, ill = ill, num_cyc = 2, 
-                           x0 = x0, x_cut = x_cut)
+  # Test with very few cycles for speed, tuning disabled
+  results <- temper_and_tune_usher3(th0, x = x, ill = ill, num_cyc = 2, 
+                           x0 = x0, x_cut = x_cut, tune = FALSE)
   
   # Should return a list with expected components
   expect_true(is.list(results))
   expect_true(all(c("obj_fun", "th0", "optional_inputs", "temper",
                     "th_temper", "th") %in% names(results)))
+  
+  # Should not contain tuning components when tune=FALSE
+  expect_false("optim_result" %in% names(results))
+  expect_false("th_bar" %in% names(results))
 })
 
-test_that("temper_usher3 with x_cut = Inf works", {
+test_that("temper_and_tune_usher3 with x_cut = Inf and tune=FALSE works", {
   x <- c(10, 20, 30, 40, 50)
   ill <- c(0, 1, 0, 1, 0)
   
-  # Test with very few cycles and x_cut = Inf (default behavior)
-  results <- temper_usher3(th0, x = x, ill = ill, num_cyc = 2, 
-                           x_cut = Inf)
+  # Test with very few cycles and x_cut = Inf (default behavior), tuning disabled
+  results <- temper_and_tune_usher3(th0, x = x, ill = ill, num_cyc = 2, 
+                           x_cut = Inf, tune = FALSE)
   
   expect_true(is.list(results))
+  expect_false("optim_result" %in% names(results))
 })
 
-test_that("temper_usher3 with x_cut and Gompertz-Makeham works", {
+test_that("temper_and_tune_usher3 with x_cut, Gompertz-Makeham, and tune=FALSE works", {
   x <- c(10, 20, 30, 40, 50)
   ill <- c(0, 1, 0, 1, 0)
   x_cut <- 6
@@ -608,10 +613,104 @@ test_that("temper_usher3 with x_cut and Gompertz-Makeham works", {
                     log(0.917 * 0.1 / (0.075 * 0.001)) / (0.917 * 0.1),
                     0.917 * 0.1)
   
-  # Test with very few cycles
-  results <- temper_usher3(th0_gompertz, x = x, ill = ill, num_cyc = 2,
-                           use_gompertz = TRUE, x_cut = x_cut)
+  # Test with very few cycles, tuning disabled
+  results <- temper_and_tune_usher3(th0_gompertz, x = x, ill = ill, num_cyc = 2,
+                           use_gompertz = TRUE, x_cut = x_cut, tune = FALSE)
   
   expect_true(is.list(results))
   expect_equal(length(results$th), 5)
+  expect_false("optim_result" %in% names(results))
+})
+
+# Tests for tuning functionality with x_cut
+
+test_that("temper_and_tune_usher3 with x_cut and tune=TRUE performs optimization", {
+  x <- c(10, 20, 30, 40, 50)
+  ill <- c(0, 1, 0, 1, 0)
+  x0 <- 0
+  x_cut <- 6
+  
+  # Test with tuning enabled
+  results <- temper_and_tune_usher3(th0, x = x, ill = ill, num_cyc = 2, 
+                           x0 = x0, x_cut = x_cut, tune = TRUE)
+  
+  # Should contain tuning components
+  expect_true("optim_result" %in% names(results),
+              info = "Results should contain optim_result when tune=TRUE")
+  expect_true("th_bar" %in% names(results),
+              info = "Results should contain th_bar when tune=TRUE")
+  
+  # Check optim_result structure
+  expect_true(is.list(results$optim_result))
+  expect_true(all(c("par", "value", "counts", "convergence") %in% names(results$optim_result)))
+  
+  # Check optimization was performed
+  expect_true(results$optim_result$counts["function"] > 0,
+              info = "optim should have performed function evaluations")
+  expect_true(is.finite(results$optim_result$value),
+              info = "Optimized objective value should be finite")
+})
+
+test_that("temper_and_tune_usher3 with x_cut and tune=TRUE improves objective", {
+  x <- c(10, 20, 30, 40, 50)
+  ill <- c(0, 1, 0, 1, 0)
+  x_cut <- 6
+  
+  results <- temper_and_tune_usher3(th0, x = x, ill = ill, num_cyc = 2,
+                                    x_cut = x_cut, tune = TRUE)
+  
+  # Get tempered objective value
+  n <- which.min(unlist(lapply(results$temper$chains, function(x) {x$eta_best})))
+  tempered_obj <- results$temper$chains[[n]]$eta_best
+  
+  # Tuned objective should be <= tempered objective
+  expect_true(results$optim_result$value <= tempered_obj + 1e-6,
+              info = "Tuning should improve or maintain objective with x_cut")
+})
+
+test_that("temper_and_tune_usher3 with tune=TRUE, x_cut, and Gompertz-Makeham works", {
+  x <- c(10, 20, 30, 40, 50)
+  ill <- c(0, 1, 0, 1, 0)
+  x_cut <- 6
+  
+  th0_gompertz <- c(2e-2, 1.2, 0.368 * 0.01,
+                    log(0.917 * 0.1 / (0.075 * 0.001)) / (0.917 * 0.1),
+                    0.917 * 0.1)
+  
+  # Test with tuning enabled
+  results <- temper_and_tune_usher3(th0_gompertz, x = x, ill = ill, num_cyc = 2,
+                           use_gompertz = TRUE, x_cut = x_cut, tune = TRUE)
+  
+  # Check tuning components are present
+  expect_true("optim_result" %in% names(results))
+  expect_true("th_bar" %in% names(results))
+  
+  # Check parameter length is maintained
+  expect_equal(length(results$th), 5,
+               info = "th should have length 5 with use_gompertz=TRUE")
+  expect_equal(length(results$th_bar), 5,
+               info = "th_bar should have length 5 with use_gompertz=TRUE")
+  
+  # Check optimization was performed
+  expect_true(results$optim_result$counts["function"] > 0)
+  expect_false(anyNA(results$th))
+})
+
+test_that("temper_and_tune_usher3 with x_cut = Inf and tune=TRUE works", {
+  x <- c(10, 20, 30, 40, 50)
+  ill <- c(0, 1, 0, 1, 0)
+  
+  # Test with x_cut = Inf and tuning enabled
+  results <- temper_and_tune_usher3(th0, x = x, ill = ill, num_cyc = 2,
+                           x_cut = Inf, tune = TRUE)
+  
+  # Should have tuning components
+  expect_true("optim_result" %in% names(results))
+  expect_true("th_bar" %in% names(results))
+  
+  # Check that th_bar matches optim_result$par
+  expect_equal(results$th_bar, results$optim_result$par)
+  
+  # Check that th equals exp(th_bar)
+  expect_equal(results$th, exp(results$th_bar), tolerance = 1e-10)
 })

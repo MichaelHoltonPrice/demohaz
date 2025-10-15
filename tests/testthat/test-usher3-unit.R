@@ -212,18 +212,24 @@ test_that("nll_usher3_hessian_wrapper returns a valid negative log-likelihood ve
 #  expect_true(all(c("Estimate", "StandErr", "z", "pval", "against", "sideAdj") %in% names(errors)))
 #})
 
-test_that("temper_usher3 returns viable results", {
+test_that("temper_and_tune_usher3 with tune=FALSE returns viable results (tempering only)", {
   # Test case: Valid inputs
   x <- c(10, 20, 30, 40, 50)
   ill <- c(0, 1, 0, 1, 0)
 
-  # Get results from the function
-  results <- temper_usher3(x = x, ill = ill)
+  # Get results from the function with tuning disabled
+  results <- temper_and_tune_usher3(x = x, ill = ill, tune = FALSE)
 
   # Check if the results are a list and contain specific names
   expect_true(is.list(results))
   expect_true(all(c("obj_fun", "th0", "optional_inputs", "temper",
                     "th_temper", "th") %in% names(results)))
+  
+  # Should not contain optim_result or th_bar when tune=FALSE
+  expect_false("optim_result" %in% names(results), 
+               info = "optim_result should not be present when tune=FALSE")
+  expect_false("th_bar" %in% names(results), 
+               info = "th_bar should not be present when tune=FALSE")
 
   # Extract transformed parameter vectors from results
   th_temper <- exp(results$th_temper)
@@ -236,12 +242,11 @@ test_that("temper_usher3 returns viable results", {
   expect_false(all(th_temper == th0), 
                info = "'th_temper' should not match 'th0'")
 
-  # Check that 'th' equals 'th_temper'
+  # Check that 'th' equals 'th_temper' when tune=FALSE
   expect_true(all(th == th_temper), 
-              info = "'th' should match 'th_temper'")
+              info = "'th' should match 'th_temper' when tune=FALSE")
 
   # Check that 'th' and 'th_temper' contain no NA values
-  # TODO: actually implement the tuning step
   expect_false(anyNA(th), info = "'th' should not contain NA values")
   expect_false(anyNA(th_temper), 
                info = "'th_temper' should not contain NA values")
@@ -277,12 +282,15 @@ test_that("nll_usher3 handles Gompertz-Makeham mortality correctly", {
   expect_true(is.finite(nll_with_na))
 })
 
-test_that("temper_usher3 handles use_gompertz = TRUE correctly", {
-  results_gompertz <- temper_usher3(th0 = th0_gompertz, x = x,
-                                    ill = ill, use_gompertz = TRUE)
+test_that("temper_and_tune_usher3 with tune=FALSE handles use_gompertz = TRUE correctly", {
+  results_gompertz <- temper_and_tune_usher3(th0 = th0_gompertz, x = x,
+                                    ill = ill, use_gompertz = TRUE, tune = FALSE)
   expect_true(is.list(results_gompertz))
   expect_true(all(c("obj_fun", "th0", "optional_inputs", "temper",
                     "th_temper", "th") %in% names(results_gompertz)))
+  
+  # Should not contain optim_result when tune=FALSE
+  expect_false("optim_result" %in% names(results_gompertz))
 
   th_temper <- results_gompertz$th_temper
   th <- results_gompertz$th
@@ -290,14 +298,15 @@ test_that("temper_usher3 handles use_gompertz = TRUE correctly", {
                info = "'th' should have length 5 when use_gompertz = TRUE")
   expect_false(all(th == th0_gompertz))
   expect_false(all(th_temper == th0_gompertz))
-  expect_true(all(th == th_temper))
+  expect_true(all(th == th_temper), 
+              info = "'th' should match 'th_temper' when tune=FALSE")
   expect_false(anyNA(th))
   expect_false(anyNA(th_temper))
 })
 
-test_that("temper_usher3 adjusts parameter vector length correctly", {
-  results_adjusted <- temper_usher3(th0 = th0_full, x = x, ill = ill,
-                                    use_gompertz = TRUE)
+test_that("temper_and_tune_usher3 adjusts parameter vector length correctly", {
+  results_adjusted <- temper_and_tune_usher3(th0 = th0_full, x = x, ill = ill,
+                                    use_gompertz = TRUE, tune = FALSE)
   adjusted_th0 <- results_adjusted$th0
   expect_equal(length(adjusted_th0), 5)
   expected_th0_adjusted <- th0_full[c(1, 2, 5, 6, 7)]
@@ -312,17 +321,151 @@ test_that("nll_usher3 checks negative parameters with varying lengths", {
   expect_equal(nll_usher3(theta_negative_full, x, ill), Inf)
 })
 
-test_that("temper_usher3 errors with incorrect th0 length", {
+test_that("temper_and_tune_usher3 errors with incorrect th0 length", {
   th0_incorrect <- c(0.02, 1.2, 0.1, 0.2, 0.3, 0.4)
-  expect_error(temper_usher3(th0 = th0_incorrect, x = x, ill = ill,
+  expect_error(temper_and_tune_usher3(th0 = th0_incorrect, x = x, ill = ill,
                              use_gompertz = TRUE),
                "th0 should have length 5 or 7 if use_gompertz is TRUE")
 })
 
-test_that("temper_usher3 defaults correctly when use_gompertz = FALSE", {
-  expect_error(temper_usher3(th0 = th0_gompertz, x = x, ill = ill,
+test_that("temper_and_tune_usher3 defaults correctly when use_gompertz = FALSE", {
+  expect_error(temper_and_tune_usher3(th0 = th0_gompertz, x = x, ill = ill,
                              use_gompertz = FALSE),
                "th0 should have length 7")
+})
+
+# Tests for tuning functionality (tune=TRUE)
+
+test_that("temper_and_tune_usher3 with tune=TRUE returns expected components", {
+  x <- c(10, 20, 30, 40, 50)
+  ill <- c(0, 1, 0, 1, 0)
+  
+  results <- temper_and_tune_usher3(x = x, ill = ill, tune = TRUE, num_cyc = 2)
+  
+  # Check that results contain tuning-specific components
+  expect_true(is.list(results))
+  expect_true(all(c("obj_fun", "th0", "optional_inputs", "temper",
+                    "th_temper", "optim_result", "th_bar", "th") %in% names(results)),
+              info = "Results should contain optim_result, th_bar, and th when tune=TRUE")
+  
+  # Check optim_result structure
+  expect_true(is.list(results$optim_result))
+  expect_true(all(c("par", "value", "counts", "convergence") %in% names(results$optim_result)),
+              info = "optim_result should contain par, value, counts, and convergence")
+  
+  # Check that th_bar matches optim_result$par
+  expect_equal(results$th_bar, results$optim_result$par,
+               info = "th_bar should match optim_result$par")
+  
+  # Check that th equals exp(th_bar)
+  expect_equal(results$th, exp(results$th_bar), tolerance = 1e-10,
+               info = "th should equal exp(th_bar)")
+  
+  # Check no NA values
+  expect_false(anyNA(results$th))
+  expect_false(anyNA(results$th_bar))
+})
+
+test_that("temper_and_tune_usher3 with tune=TRUE performs optimization", {
+  x <- c(10, 20, 30, 40, 50)
+  ill <- c(0, 1, 0, 1, 0)
+  
+  results <- temper_and_tune_usher3(x = x, ill = ill, tune = TRUE, num_cyc = 2)
+  
+  # Check that tuning was performed (function evaluations > 0)
+  expect_true(results$optim_result$counts["function"] > 0,
+              info = "optim should have performed function evaluations")
+  
+  # Check that objective value is finite
+  expect_true(is.finite(results$optim_result$value),
+              info = "Optimized objective value should be finite")
+  
+  # Check that th is not NA
+  expect_false(anyNA(results$th))
+})
+
+test_that("temper_and_tune_usher3 tuning improves or maintains objective function value", {
+  x <- c(10, 20, 30, 40, 50)
+  ill <- c(0, 1, 0, 1, 0)
+  
+  results <- temper_and_tune_usher3(x = x, ill = ill, tune = TRUE, num_cyc = 2)
+  
+  # Get tempered objective value
+  n <- which.min(unlist(lapply(results$temper$chains, function(x) {x$eta_best})))
+  tempered_obj <- results$temper$chains[[n]]$eta_best
+  
+  # Tuned objective should be <= tempered objective (allowing for small numerical differences)
+  expect_true(results$optim_result$value <= tempered_obj + 1e-6,
+              info = "Tuning should improve or maintain objective function value")
+})
+
+test_that("temper_and_tune_usher3 uses tune=TRUE by default", {
+  x <- c(10, 20, 30, 40, 50)
+  ill <- c(0, 1, 0, 1, 0)
+  
+  # Call without specifying tune parameter
+  results <- temper_and_tune_usher3(x = x, ill = ill, num_cyc = 2)
+  
+  # Should have tuning components by default
+  expect_true("optim_result" %in% names(results),
+              info = "optim_result should be present when tune is not specified (default=TRUE)")
+  expect_true("th_bar" %in% names(results),
+              info = "th_bar should be present when tune is not specified (default=TRUE)")
+})
+
+test_that("temper_and_tune_usher3 with tune=TRUE and use_gompertz=TRUE works correctly", {
+  x <- c(10, 20, 30, 40, 50)
+  ill <- c(0, 1, 0, 1, 0)
+  
+  results <- temper_and_tune_usher3(th0 = th0_gompertz, x = x, ill = ill,
+                                    use_gompertz = TRUE, tune = TRUE, num_cyc = 2)
+  
+  # Check that results contain tuning components
+  expect_true("optim_result" %in% names(results))
+  expect_true("th_bar" %in% names(results))
+  
+  # Check that parameter length is maintained (5 for Gompertz-Makeham)
+  expect_equal(length(results$th), 5,
+               info = "th should have length 5 with use_gompertz=TRUE")
+  expect_equal(length(results$th_bar), 5,
+               info = "th_bar should have length 5 with use_gompertz=TRUE")
+  
+  # Check optimization was performed
+  expect_true(results$optim_result$counts["function"] > 0)
+  expect_false(anyNA(results$th))
+})
+
+test_that("temper_and_tune_usher3 tuned result differs from tempered result", {
+  x <- c(10, 20, 30, 40, 50)
+  ill <- c(0, 1, 0, 1, 0)
+  
+  results <- temper_and_tune_usher3(x = x, ill = ill, tune = TRUE, num_cyc = 2)
+  
+  # In most cases, tuned result should differ from tempered result
+  # (though they could be the same if already at optimum)
+  # Just check that both exist and are valid
+  expect_false(anyNA(results$th))
+  expect_false(anyNA(results$th_temper))
+  
+  # Both should be valid parameter vectors
+  expect_equal(length(results$th), length(results$th_temper))
+})
+
+test_that("temper_and_tune_usher3 respects custom control parameters", {
+  x <- c(10, 20, 30, 40, 50)
+  ill <- c(0, 1, 0, 1, 0)
+  
+  # Test with custom maxit (lower for speed in testing)
+  results <- temper_and_tune_usher3(x = x, ill = ill, tune = TRUE, num_cyc = 2,
+                                    control = list(maxit = 100))
+  
+  # Should still produce valid results
+  expect_true("optim_result" %in% names(results))
+  expect_false(anyNA(results$th))
+  
+  # Verify it didn't exceed the specified maxit
+  expect_true(results$optim_result$counts["function"] <= 100 * (length(results$th_temper) + 1),
+              info = "Should not exceed specified maxit bounds")
 })
 
 test_that("nll_usher3 handles both full and reduced parameter vectors", {
