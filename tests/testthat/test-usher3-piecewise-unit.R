@@ -560,6 +560,76 @@ test_that("usher3_gradient works with x_cut = Inf", {
   expect_false(anyNA(grad))
 })
 
+test_that("usher3_gradient works with log_transform = TRUE", {
+  x <- c(10, 20, 30, 40, 50)
+  ill <- c(0, 1, 0, 1, 0)
+  x0 <- 0
+  
+  # Use log-transformed parameters
+  th0_bar <- log(th0)
+  grad_log <- usher3_gradient(th0_bar, x, ill, x0, log_transform = TRUE)
+  
+  # Should be a numeric vector
+  expect_true(is.numeric(grad_log))
+  
+  # Should have correct length
+  expect_equal(length(grad_log), 7)
+  
+  # Should not contain NA values
+  expect_false(anyNA(grad_log))
+})
+
+test_that("usher3_hessian works with log_transform = TRUE", {
+  x <- c(10, 20, 30, 40, 50)
+  ill <- c(0, 1, 0, 1, 0)
+  x0 <- 0
+  
+  # Use log-transformed parameters
+  th0_bar <- log(th0)
+  H_log <- usher3_hessian(th0_bar, x, ill, x0, log_transform = TRUE)
+  
+  # Should be a matrix
+  expect_true(is.matrix(H_log))
+  
+  # Should have correct dimensions
+  expect_equal(dim(H_log), c(7, 7))
+  
+  # Should not contain NA values
+  expect_false(anyNA(H_log))
+})
+
+test_that("usher3_errors works with log_transform = TRUE", {
+  # Use a larger dataset and the true parameter vector so that the Hessian
+  # is positive definite and standard errors are real-valued
+  x <- c(1, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60, 65, 70, 75, 80)
+  ill <- c(0, 1, 0, 1, 0, 0, 1, 0, 1, 0, 1, 0, 0, 1, 0, 1, 0)
+  x0 <- 0
+  th0_bar <- log(th0)
+  
+  errors_log <- usher3_errors(th0_bar, x, ill, x0, log_transform = TRUE)
+  
+  # Should be a data frame with expected structure
+  expect_true(is.data.frame(errors_log))
+  expect_equal(nrow(errors_log), 7)
+  expect_true(all(grepl("^log_", rownames(errors_log))))
+  expect_true(all(c("Estimate", "StandErr", "z", "pval", "against", "sideAdj") %in% names(errors_log)))
+  
+  # Only log_k2 has a testable null hypothesis (k2 = 1, i.e. log_k2 = 0)
+  expect_equal(errors_log["log_k2", "against"], 0)
+  expect_false(is.na(errors_log["log_k2", "z"]))
+  expect_false(is.na(errors_log["log_k2", "pval"]))
+  
+  # All other parameters should have NA for against, z, and pval
+  # (null of param = 0 is log(0) = -Inf, not a meaningful Wald test)
+  untestable <- c("log_k1", "log_a1", "log_b1", "log_a2", "log_a3", "log_b3")
+  expect_true(all(is.na(errors_log[untestable, "against"])))
+  expect_true(all(is.na(errors_log[untestable, "z"])))
+  expect_true(all(is.na(errors_log[untestable, "pval"])))
+  
+  # Standard errors should be real (not NaN) with sufficient data
+  expect_false(anyNA(errors_log[, "StandErr"]))
+})
+
 test_that("usher3_errors works with x_cut = Inf", {
   x <- c(10, 20, 30, 40, 50)
   ill <- c(0, 1, 0, 1, 0)

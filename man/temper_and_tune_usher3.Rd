@@ -19,7 +19,7 @@ temper_and_tune_usher3(
   report_period = 50,
   use_gompertz = FALSE,
   tune = TRUE,
-  control = list(maxit = 10000),
+  control = list(maxit = 10000, reltol = 1e-12, abstol = 1e-12),
   ...
 )
 }
@@ -54,7 +54,8 @@ Siler documentation)}
 \item{tune}{Whether to perform Nelder-Mead tuning after tempering [default: TRUE]}
 
 \item{control}{Control parameters for optim() when tune=TRUE 
-[default: list(maxit = 10000)]. See ?optim for available options.}
+[default: list(maxit = 10000, reltol = 1e-12, abstol = 1e-12)]. 
+See ?optim for available options.}
 
 \item{...}{Additional arguments passed to obj_fun, including x (ages), 
 ill (illness indicators), x0 (conditional starting age, default 0), 

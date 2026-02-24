@@ -730,41 +730,63 @@ nll_usher3 <- function(theta, x, ill, x0 = 0, x_cut = Inf) {
 
 #' Calculate the Hessian matrix for the Usher 3 model
 #'
-#' @param theta The parameter vector for the Usher illness-death model
+#' @param theta The parameter vector for the Usher illness-death model.
+#'   If log_transform=TRUE, this should be log(theta).
 #' @param x The vector of ages-at-death
 #' @param ill The vector of illness indicators
 #' @param x0 Conditional starting age [default: 0]
 #' @param x_cut The age at which the well-to-ill transition hazard becomes
 #'   zero [default: Inf]
+#' @param log_transform If TRUE, compute Hessian with respect to log(theta) 
+#'   [default: FALSE]
 #'
 #' @return The Hessian matrix
 #'
 #' @export
-usher3_hessian <- function(theta, x, ill, x0 = 0, x_cut = Inf) {
-  H <- numDeriv::hessian(nll_usher3_hessian_wrapper,
-                         theta, method.args = list(eps = 1e-12),
-                         ageVect = x,
-                         illVect = ill, x0 = x0, x_cut = x_cut)
+usher3_hessian <- function(theta, x, ill, x0 = 0, x_cut = Inf, 
+                           log_transform = FALSE) {
+  if (log_transform) {
+    H <- numDeriv::hessian(nll_usher3_log_hessian_wrapper,
+                           theta, method.args = list(eps = 1e-12),
+                           ageVect = x, illVect = ill, x0 = x0, x_cut = x_cut)
+  } else {
+    # Compute Hessian with respect to untransformed parameters
+    H <- numDeriv::hessian(nll_usher3_hessian_wrapper,
+                           theta, method.args = list(eps = 1e-12),
+                           ageVect = x,
+                           illVect = ill, x0 = x0, x_cut = x_cut)
+  }
   return(H)
 }
 
 #' Calculate the gradient of the negative log-likelihood for the Usher 3 model
 #'
-#' @param theta The parameter vector for the Usher illness-death model
+#' @param theta The parameter vector for the Usher illness-death model.
+#'   If log_transform=TRUE, this should be log(theta).
 #' @param x The vector of ages-at-death
 #' @param ill The vector of illness indicators
 #' @param x0 Conditional starting age [default: 0]
 #' @param x_cut The age at which the well-to-ill transition hazard becomes
 #'   zero [default: Inf]
+#' @param log_transform If TRUE, compute gradient with respect to log(theta) 
+#'   [default: FALSE]
 #'
 #' @return The gradient vector
 #'
 #' @export
-usher3_gradient <- function(theta, x, ill, x0 = 0, x_cut = Inf) {
-  grad_vec <- numDeriv::grad(nll_usher3_hessian_wrapper,
-                             theta, method.args = list(eps = 1e-12),
-                             ageVect = x,
-                             illVect = ill, x0 = x0, x_cut = x_cut)
+usher3_gradient <- function(theta, x, ill, x0 = 0, x_cut = Inf,
+                            log_transform = FALSE) {
+  if (log_transform) {
+    grad_vec <- numDeriv::grad(nll_usher3_log_hessian_wrapper,
+                               theta, method.args = list(eps = 1e-12),
+                               ageVect = x, illVect = ill, x0 = x0, x_cut = x_cut)
+  } else {
+    # Compute gradient with respect to untransformed parameters
+    grad_vec <- numDeriv::grad(nll_usher3_hessian_wrapper,
+                               theta, method.args = list(eps = 1e-12),
+                               ageVect = x,
+                               illVect = ill, x0 = x0, x_cut = x_cut)
+  }
   return(grad_vec)
 }
 
@@ -784,27 +806,64 @@ nll_usher3_hessian_wrapper <- function(paramVect, ageVect, illVect, x0 = 0,
   return(nll_usher3(paramVect, ageVect, illVect, x0, x_cut))
 }
 
+#' Wrapper for Hessian/gradient of the log-transformed Usher 3 NLL
+#'
+#' Like nll_usher3_hessian_wrapper but exponentiates the parameter vector
+#' first. Uses ageVect/illVect to avoid name collision with numDeriv's x
+#' parameter.
+#'
+#' @param paramVect The log-transformed parameter vector
+#' @param ageVect The vector of ages-at-death
+#' @param illVect The vector of illness indicators
+#' @param x0 Conditional starting age [default: 0]
+#' @param x_cut The age at which the well-to-ill transition hazard becomes
+#'   zero [default: Inf]
+#'
+#' @return The negative log-likelihood value
+#'
+nll_usher3_log_hessian_wrapper <- function(paramVect, ageVect, illVect, x0 = 0,
+                                           x_cut = Inf) {
+  return(nll_usher3(exp(paramVect), ageVect, illVect, x0, x_cut))
+}
+
 #' Calculate standard errors, z-scores, and p-values for the Usher 3 model
 #'
-#' @param theta The parameter vector for the Usher illness-death model
+#' @param theta The parameter vector for the Usher illness-death model.
+#'   If log_transform=TRUE, this should be log(theta).
 #' @param x The vector of ages-at-death
 #' @param ill The vector of illness indicators
 #' @param x0 Conditional starting age [default: 0]
 #' @param x_cut The age at which the well-to-ill transition hazard becomes
 #'   zero [default: Inf]
+#' @param log_transform If TRUE, compute errors with respect to log(theta) 
+#'   [default: FALSE]
 #'
 #' @return A data frame with standard errors, z-scores, and p-values
 #'
 #' @export
-usher3_errors <- function(theta, x, ill, x0 = 0, x_cut = Inf) {
-  H <- usher3_hessian(theta, x, ill, x0, x_cut)
-  against <- c(0, 1, 0, 0, 0, 0, 0)
+usher3_errors <- function(theta, x, ill, x0 = 0, x_cut = Inf,
+                          log_transform = FALSE) {
+  H <- usher3_hessian(theta, x, ill, x0, x_cut, log_transform = log_transform)
+  
+  if (log_transform) {
+    against <- c(NA, 0, NA, NA, NA, NA, NA)
+    varName <- c('log_k1', 'log_k2', 'log_a1', 'log_b1', 'log_a2', 'log_a3', 'log_b3')
+  } else {
+    against <- c(0, 1, 0, 0, 0, 0, 0)
+    varName <- c('k1', 'k2', 'a1', 'b1', 'a2', 'a3', 'b3')
+  }
+  
   sideAdjustment <- c(1, 2, 1, 1, 1, 1, 1)
-  varName <- c('k1', 'k2', 'a1', 'b1', 'a2', 'a3', 'b3')
 
   seVect <- sqrt(diag(solve(H)))
   zVect <- (theta - against) / seVect
   pvalVect <- sideAdjustment * pnorm(-abs(zVect))
+  
+  # Where no null hypothesis is meaningful (against = NA), clear z and p
+  untestable <- is.na(against)
+  zVect[untestable] <- NA
+  pvalVect[untestable] <- NA
+
   outputDf <- data.frame(Estimate = theta, StandErr = seVect, z = zVect,
                          pval = pvalVect, against = against,
                          sideAdj = sideAdjustment)
@@ -1013,7 +1072,8 @@ nll_usher3_optim_wrapper <- function(th_bar, ...) {
 #' @param use_gompertz Whether to use Gompert-Makeham mortality [default: FAlSE]
 #' @param tune Whether to perform Nelder-Mead tuning after tempering [default: TRUE]
 #' @param control Control parameters for optim() when tune=TRUE 
-#'   [default: list(maxit = 10000)]. See ?optim for available options.
+#'   [default: list(maxit = 10000, reltol = 1e-12, abstol = 1e-12)]. 
+#'   See ?optim for available options.
 #' @param ... Additional arguments passed to obj_fun, including x (ages), 
 #'   ill (illness indicators), x0 (conditional starting age, default 0), 
 #'   and x_cut (age cutoff for transitions, default Inf)
@@ -1036,7 +1096,7 @@ temper_and_tune_usher3 <- function(th0 = c(1e-2,
                           func_tol = 1e-6, miniter = 1,
                           maxiter = 1000, report_period = 50,
                           use_gompertz=FALSE, tune=TRUE, 
-                          control = list(maxit = 10000), ...) {
+                          control = list(maxit = 10000, reltol = 1e-12, abstol = 1e-12), ...) {
   obj_fun <- nll_usher3_optim_wrapper
   if (!use_gompertz) {
     if (length(th0) != 7) {

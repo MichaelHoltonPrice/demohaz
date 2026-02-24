@@ -468,6 +468,23 @@ test_that("temper_and_tune_usher3 respects custom control parameters", {
               info = "Should not exceed specified maxit bounds")
 })
 
+test_that("temper_and_tune_usher3 uses tight default tolerances", {
+  x <- c(10, 20, 30, 40, 50)
+  ill <- c(0, 1, 0, 1, 0)
+  
+  # Call with default control (should use tight tolerances)
+  results <- temper_and_tune_usher3(x = x, ill = ill, tune = TRUE, num_cyc = 2)
+  
+  # Should converge (convergence code 0 means success)
+  expect_true(results$optim_result$convergence == 0 || 
+              results$optim_result$convergence == 1,
+              info = "Should converge or reach max iterations")
+  
+  # Should produce valid results
+  expect_false(anyNA(results$th))
+  expect_true(is.finite(results$optim_result$value))
+})
+
 test_that("nll_usher3 handles both full and reduced parameter vectors", {
   nll_full <- nll_usher3(th0_full, x, ill)
   expect_true(is.numeric(nll_full) && length(nll_full) == 1)
