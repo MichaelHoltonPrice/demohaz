@@ -928,12 +928,6 @@ calc_filtration_density <- function(xcalc, x_mid, infant_prop, discrete = T) {
 #' @export
 sample_usher3 <- function(N, th, dx, xmax, x_mid = NA, infant_prop = NA,
                           area_tol = 1e-6, x0 = 0, x_cut = Inf) {
-  # Finite x_cut not yet supported for importance sampling
-  if (is.finite(x_cut)) {
-    stop("Finite x_cut is not yet supported for sample_usher3. ",
-         "Use x_cut = Inf (the default).")
-  }
-  
   # Set up the sampling grid and calculate the densities
   filter_by_age <- !is.na(x_mid)
   k1 <- th[1]

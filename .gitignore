@@ -47,3 +47,6 @@ dev_install.R
 dev_setup.R
 sandbox.R
 run_dev_tests.R
+
+# Claude Code
+.claude/

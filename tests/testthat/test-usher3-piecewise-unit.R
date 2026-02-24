@@ -664,24 +664,73 @@ test_that("sample_usher3 with x_cut = Inf works correctly", {
   expect_true(all(samples$ill %in% c(TRUE, FALSE)))
 })
 
-test_that("sample_usher3 raises error with finite x_cut", {
+test_that("sample_usher3 with finite x_cut works correctly", {
   set.seed(456)
   N <- 50
   dx <- 0.001
   xmax <- 120
   x_cut <- 6
-  
-  expect_error(
-    sample_usher3(N, th0, dx, xmax, x0 = 0, x_cut = x_cut),
-    "Finite x_cut is not yet supported"
-  )
-  
-  # Also test with age filtration
+
+  samples <- sample_usher3(N, th0, dx, xmax, x0 = 0, x_cut = x_cut)
+
+  expect_equal(length(samples$x), N)
+  expect_equal(length(samples$ill), N)
+  expect_true(all(samples$x >= 0 & samples$x <= xmax))
+  expect_true(all(samples$ill %in% c(TRUE, FALSE)))
+  # rho1 and rho2 should be returned on the sampling grid
+  xcalc <- seq(0, xmax, by = dx)
+  expect_equal(length(samples$rho1), length(xcalc))
+  expect_equal(length(samples$rho2), length(xcalc))
+})
+
+test_that("sample_usher3 with finite x_cut and age filtration works", {
+  set.seed(789)
+  N <- 50
+  dx <- 0.001
+  xmax <- 120
+  x_cut <- 6
   x_mid <- 50
   infant_prop <- 0.1
+
+  samples <- sample_usher3(N, th0, dx, xmax, x_mid, infant_prop,
+                            x0 = 0, x_cut = x_cut)
+
+  expect_equal(length(samples$x), N)
+  expect_equal(length(samples$ill), N)
+  expect_true(all(samples$x >= 0 & samples$x <= 2 * x_mid))
+  expect_true(all(samples$ill %in% c(TRUE, FALSE)))
+  xcalc <- seq(0, xmax, by = dx)
+  expect_equal(length(samples$rho1), length(xcalc))
+  expect_equal(length(samples$rho2), length(xcalc))
+})
+
+test_that("sample_usher3 with finite x_cut and x0 > 0 errors (grid starts at 0)", {
+  # sample_usher3 builds xcalc from 0, so q_1 enforces x >= x0 and errors.
+  # When sample_usher3 gains x0 > 0 support, replace this with structural checks.
+  N <- 50
+  dx <- 0.001
+  xmax <- 120
+
   expect_error(
-    sample_usher3(N, th0, dx, xmax, x_mid, infant_prop, x_cut = x_cut),
-    "Finite x_cut is not yet supported"
+    sample_usher3(N, th0, dx, xmax, x0 = 2, x_cut = 6),
+    "x must be >= x0"
+  )
+})
+
+test_that("sample_usher3 with x0 >= x_cut errors (grid starts at 0)", {
+  # Same grid limitation as above: xcalc starts at 0 but x0 > 0.
+  N <- 50
+  dx <- 0.001
+  xmax <- 120
+
+  expect_error(
+    sample_usher3(N, th0, dx, xmax, x0 = 6, x_cut = 6),
+    "x must be >= x0"
+  )
+
+  expect_error(
+    sample_usher3(N, th0, dx, xmax, x0 = 10, x_cut = 6),
+    "x must be >= x0"
   )
 })
 
