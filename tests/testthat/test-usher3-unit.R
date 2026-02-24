@@ -193,24 +193,32 @@ test_that("nll_usher3_hessian_wrapper returns a valid negative log-likelihood ve
   expect_false(anyNA(nll), info = "Negative log-likelihood vector should not contain NA.")
 })
 
-# TODO: this must be tested with a parameter vector at a local minimum of the
-# negative log-likelihood. This may require more values in the x vector.
-#test_that("usher3_errors returns viabl3e standard errors, z-scores, and p-values", {
-#  # Test case 1: Valid parameter values
-#  TODO: use th0 here
-#  #theta <- c(2e-2, 1.2, 0.175, 1.40, 0.368 * 0.01, 0.075 * 0.001, 0.917 * 0.1)
-#  theta <- c(1.319066e-02, 1.723116e+00, 1.758189e-02, 1.696364e+00,
-#             4.814728e-07, 3.810192e+01, 5.427843e-02)
-#  x <- c(10, 20, 30, 40, 50)
-#  ill <- c(0, 1, 0, 1, 0)
-#  errors <- usher3_errors(theta, x, ill)
-#  print('-------------')
-#  print('-------------')
-#  print('-------------')
-#  print(errors)
-#  expect_true(is.data.frame(errors) && nrow(errors) == 7)
-#  expect_true(all(c("Estimate", "StandErr", "z", "pval", "against", "sideAdj") %in% names(errors)))
-#})
+test_that("usher3_errors returns viable standard errors, z-scores, and p-values", {
+  # Fitted MLE for this dataset (pre-computed via temper_and_tune_usher3 so the
+  # Hessian is positive definite and standard errors are real-valued)
+  th_fit <- c(0.0114965218773805, 6.1254633647817265, 0.0195351928164556,
+              0.9244073032291462, 0.0136577490228522, 79.2911787960141652,
+              0.5551230837354401)
+  x <- c(1, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60, 65, 70, 75, 80)
+  ill <- c(0, 1, 0, 1, 0, 0, 1, 0, 1, 0, 1, 0, 0, 1, 0, 1, 0)
+  
+  errors <- usher3_errors(th_fit, x, ill)
+  
+  expect_true(is.data.frame(errors))
+  expect_equal(nrow(errors), 7)
+  expect_true(all(c("Estimate", "StandErr", "z", "pval", "against", "sideAdj") %in% names(errors)))
+  expect_equal(rownames(errors), c('k1', 'k2', 'a1', 'b1', 'a2', 'a3', 'b3'))
+  
+  # Standard errors should be real (not NaN)
+  expect_false(anyNA(errors$StandErr))
+  
+  # z-scores and p-values should be finite
+  expect_true(all(is.finite(errors$z)))
+  expect_true(all(is.finite(errors$pval)))
+  
+  # Null hypotheses: k1=0, k2=1, all others=0
+  expect_equal(errors$against, c(0, 1, 0, 0, 0, 0, 0))
+})
 
 test_that("temper_and_tune_usher3 with tune=FALSE returns viable results (tempering only)", {
   # Test case: Valid inputs
