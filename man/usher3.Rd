@@ -16,7 +16,8 @@ usher3_integrand(y, k1, k2, b_siler, x_cut = Inf)
 \arguments{
 \item{x}{The vector of ages}
 
-\item{k1}{The transition rate from the healthy state to the ill state}
+\item{k1}{The transition rate from the healthy state to the ill state
+(applies only before x_cut; zero after x_cut)}
 
 \item{b_siler}{The parameter vector for the Siler hazard model}
 
@@ -26,15 +27,15 @@ usher3_integrand(y, k1, k2, b_siler, x_cut = Inf)
 zero [default: Inf]. When x_cut = Inf, this reduces to the standard
 constant hazard model.}
 
-\item{w}{Optional weight vector [w_1(x0), w_2(x0)]. If NULL (default), 
-weights are computed using calc_weights, which assumes disease etiology 
-unfolds from birth. To assume everyone starts in the well state at x0, 
+\item{w}{Optional weight vector [w_1(x0), w_2(x0)]. If NULL (default),
+weights are computed using calc_weights, which assumes disease etiology
+unfolds from birth. To assume everyone starts in the well state at x0,
 pass w = c(1, 0).}
 
 \item{k2}{The factor by which the mortality hazard out of the ill state is
 larger than that out of the healthy state}
 
-\item{y}{The variable of integration}
+\item{y}{The variable of integration (age of illness onset)}
 }
 \value{
 The density rho1 evaluated at the locations in the input vector x
@@ -58,10 +59,38 @@ and the Siler hazard model is used to describe the baseline mortality.
   individual who died in the healthy state at a given age, while rho2
   represents the probability density of observing an individual who died in
   the ill state at a given age. They are not proper densities since it is
-  the some of the two, rho1 + rho2, that integrates to 1; hence, we
+  the sum of the two, rho1 + rho2, that integrates to 1; hence, we
   sometimes call them pseudo-densities.
 
   The calculation of rho2 involves an integral term, which is computed using
   the \code{integrate} function in R. The integrand for this term is given
   by the \code{usher3_integrand} function.
+
+\code{usher3_rho1} computes the pseudo-density for dying in the well
+(healthy) state at age x: rho1(x) = q_1(x) * lambda_13(x), where q_1 is
+the occupancy probability of the well state and lambda_13 = hsiler(x, b)
+is the baseline Siler mortality hazard.
+
+\code{usher3_rho2} computes the pseudo-density for dying in the ill state
+at age x: rho2(x) = q_2(x) * lambda_23(x), where q_2 is the occupancy
+probability of the ill state and lambda_23 = k2 * hsiler(x, b) is the
+elevated mortality hazard for ill individuals.
+
+\code{usher3_integrand} computes S12(0, y) * [S_13(0, y)]^(1 - k2), where
+S12 is the well-to-ill survival function and S_13 is the Siler survival
+function. The subscript notation "0_y" in the source code indicates that
+the relevant survival quantities are evaluated over the interval [0, y].
+}
+\examples{
+b_siler <- c(0.175, 1.40, 0.00368, 38.1, 0.0917)
+x <- seq(0, 100, by = 1)
+rho1 <- usher3_rho1(x, k1 = 0.02, b_siler = b_siler, k2 = 1.2)
+
+b_siler <- c(0.175, 1.40, 0.00368, 38.1, 0.0917)
+x <- seq(0, 100, by = 1)
+rho2 <- usher3_rho2(x, k1 = 0.02, k2 = 1.2, b_siler = b_siler)
+
+b_siler <- c(0.175, 1.40, 0.00368, 38.1, 0.0917)
+usher3_integrand(5, k1 = 0.02, k2 = 1.2, b_siler = b_siler)
+
 }

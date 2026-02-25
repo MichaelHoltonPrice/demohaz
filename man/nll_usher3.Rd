@@ -2,22 +2,23 @@
 % Please edit documentation in R/usher3.R
 \name{nll_usher3}
 \alias{nll_usher3}
-\title{Calculate the negative log-likelihood for the Usher 3 illness-death model.
-This method also supports Gompertz-Makeham mortality, for which the infant
-mortality term is zero; this is accomplished by detecting if the input
-parameter vector, theta, has length 5, which implies no infant mortality
-term.}
+\title{Calculate the negative log-likelihood for the Usher 3 illness-death model}
 \usage{
 nll_usher3(theta, x, ill, x0 = 0, x_cut = Inf)
 }
 \arguments{
 \item{theta}{The parameter vector for the Usher illness-death model with
-ordering [k1, k2, mort]. The mortality parameter vector is
-[b1, b2, b3, b4, b5], or [b3, b4, b5] for Gompertz-Makeham mortality.}
+ordering [k1, k2, b_siler]. When length(theta) == 7, b_siler is the
+full five-parameter Siler mortality vector [b1, b2, b3, b4, b5] (see
+\code{\link{hsiler}}). When length(theta) == 5, the last three elements
+are treated as Gompertz-Makeham parameters [b3, b4, b5] and infant
+mortality is set to zero (b1 = 0, b2 = 1).}
 
 \item{x}{The vector of ages-at-death}
 
-\item{ill}{The vector of illness indicators, which can have NA entries}
+\item{ill}{The vector of illness indicators (0 = well, 1 = ill). Entries
+may be NA, in which case the corresponding observations contribute
+rho1 + rho2 to the likelihood (marginalizing over illness status).}
 
 \item{x0}{Conditional starting age [default: 0]}
 
@@ -29,9 +30,26 @@ constant hazard model.}
 The negative log-likelihood value
 }
 \description{
-Calculate the negative log-likelihood for the Usher 3 illness-death model.
 This method also supports Gompertz-Makeham mortality, for which the infant
 mortality term is zero; this is accomplished by detecting if the input
 parameter vector, theta, has length 5, which implies no infant mortality
 term.
+}
+\details{
+The log-likelihood is the sum of log-densities for each observation:
+- For observations with known illness status: log(rho1(x)) if well,
+  log(rho2(x)) if ill.
+- For observations with unknown illness status (ill = NA):
+  log(rho1(x) + rho2(x)).
+
+Returns Inf (indicating an impossible parameter vector) if any parameter
+is negative or if numerical integration fails.
+}
+\examples{
+b_siler <- c(0.175, 1.40, 0.00368, 38.1, 0.0917)
+th <- c(0.02, 1.2, b_siler)
+x <- c(5, 30, 50, 70, 80)
+ill <- c(FALSE, FALSE, TRUE, TRUE, FALSE)
+nll_usher3(th, x, ill)
+
 }

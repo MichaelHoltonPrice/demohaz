@@ -34,9 +34,22 @@ for transitioning from well to ill at some intermediate age y and then
 surviving in the ill state to age x.
 }
 \details{
-Computes the probability of transitioning from well to ill between ages x0 
-and x. When x0 = 0: p_12(0, x) = k1 * [S_13(0, x)]^k2 * integral from 0 to 
-min(x_cut, x) of exp(-k1 * y) * [S_13(0, y)]^(1 - k2) dy
+Computes the probability of transitioning from well to ill between ages x0
+and x. The formula is:
 
-The integral is computed numerically using R's integrate() function.
+p_12(x0, x) = k1 * [S_13(x0, x)]^k2 * integral from x0 to min(x_cut, x)
+of exp(-k1 * (y - x0)) * [S_13(x0, y)]^(1 - k2) dy
+
+The integral is computed numerically using R's integrate() function. Each
+element of x may have a different upper integration limit (min(x_cut, x[i])),
+so the integral must be evaluated iteratively. If integrate() fails for a
+given x value, NA is returned for that element.
+}
+\examples{
+b_siler <- c(0.175, 1.40, 0.00368, 38.1, 0.0917)
+p_12(c(10, 30, 60), k1 = 0.02, k2 = 1.2, b_siler = b_siler)
+
+# With cutoff: no new transitions after age 6
+p_12(c(3, 6, 10), k1 = 0.02, k2 = 1.2, b_siler = b_siler, x_cut = 6)
+
 }

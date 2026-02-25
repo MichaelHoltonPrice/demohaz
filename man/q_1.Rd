@@ -9,8 +9,11 @@ q_1(x, w, k1, b_siler, x0 = 0, x_cut = Inf, k2 = NULL)
 \arguments{
 \item{x}{The age at which to evaluate the occupancy probability (can be vector)}
 
-\item{w}{A vector of length 2 containing [w_1(x0), w_2(x0)], the state 
-weights at age x0. If NULL, computed using calc_weights.}
+\item{w}{Optional weight vector [w_1(x0), w_2(x0)], the proportion of
+living individuals who are well vs ill at age x0. If NULL (default),
+weights are computed using calc_weights, which assumes disease etiology
+unfolds from birth. To assume everyone starts in the well state at x0,
+pass w = c(1, 0).}
 
 \item{k1}{The constant transition rate from the healthy state to the ill
 state (before x_cut)}
@@ -34,8 +37,22 @@ given the state weights at age x0. This accounts for survival from x0 to x
 while remaining in the well state.
 }
 \details{
-Computes the occupancy probability based on three cases:
-- Case x_cut <= x0 <= x: q_1 = w_1(x0) * S_13(0,x) / S_13(0,x0)
-- Case x0 <= x_cut <= x: q_1 = w_1(x0) * exp(-k1*(x_cut - x0)) * S_13(0,x) / S_13(0,x0)
-- Case x0 <= x <= x_cut: q_1 = w_1(x0) * exp(-k1*(x - x0)) * S_13(0,x) / S_13(0,x0)
+Computes the occupancy probability based on the relationship between x, x0,
+and x_cut. All cases share the baseline mortality survival ratio
+S_13(0, x) / S_13(0, x0), which captures the probability of surviving
+background mortality from x0 to x. The cases differ in the well-to-ill
+survival term:
+
+- Case x_cut <= x0 (cutoff already passed): q_1 = w_1 * S_13(0,x) / S_13(0,x0).
+  No well-to-ill transitions possible, so only baseline mortality matters.
+- Case x0 < x_cut <= x (cutoff within interval): q_1 = w_1 * exp(-k1*(x_cut - x0)) *
+  S_13(0,x) / S_13(0,x0). Hazard accumulates from x0 to x_cut, then stops.
+- Case x0 <= x < x_cut (entirely before cutoff): q_1 = w_1 * exp(-k1*(x - x0)) *
+  S_13(0,x) / S_13(0,x0). Hazard accumulates over the full interval.
+}
+\examples{
+b_siler <- c(0.175, 1.40, 0.00368, 38.1, 0.0917)
+w <- c(1, 0)  # everyone starts well
+q_1(c(10, 30, 60), w = w, k1 = 0.02, b_siler = b_siler)
+
 }

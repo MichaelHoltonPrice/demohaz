@@ -4,10 +4,11 @@
 \alias{usher3_gradient}
 \title{Calculate the gradient of the negative log-likelihood for the Usher 3 model}
 \usage{
-usher3_gradient(theta, x, ill, x0 = 0, x_cut = Inf)
+usher3_gradient(theta, x, ill, x0 = 0, x_cut = Inf, log_transform = FALSE)
 }
 \arguments{
-\item{theta}{The parameter vector for the Usher illness-death model}
+\item{theta}{The parameter vector for the Usher illness-death model.
+If log_transform=TRUE, this should be log(theta).}
 
 \item{x}{The vector of ages-at-death}
 
@@ -17,10 +18,27 @@ usher3_gradient(theta, x, ill, x0 = 0, x_cut = Inf)
 
 \item{x_cut}{The age at which the well-to-ill transition hazard becomes
 zero [default: Inf]}
+
+\item{log_transform}{If TRUE, compute gradient with respect to log(theta)
+[default: FALSE]}
 }
 \value{
-The gradient vector
+The gradient vector (length = length(theta))
 }
 \description{
 Calculate the gradient of the negative log-likelihood for the Usher 3 model
+}
+\details{
+Uses \code{numDeriv::grad} to compute the vector of first partial
+derivatives of the negative log-likelihood with respect to theta (or
+log(theta) when log_transform=TRUE). A small step size (eps = 1e-12)
+is used for the finite-difference approximation. Useful for checking
+convergence of optimization (gradient should be near zero at the MLE).
+}
+\examples{
+b_siler <- c(0.175, 1.40, 0.00368, 38.1, 0.0917)
+th <- c(0.02, 1.2, b_siler)
+samp <- sample_usher3(200, th, 0.01, 120)
+g <- usher3_gradient(th, samp$x, samp$ill)
+
 }

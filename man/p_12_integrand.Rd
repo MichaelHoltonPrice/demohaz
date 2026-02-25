@@ -26,6 +26,9 @@ The integrand value at y
 Helper function for computing the integral in p_12(x0, x).
 }
 \details{
-The integrand is: exp(-k1 * (y - x0)) * [S_13(x0, y)]^(1 - k2)
+The integrand is: exp(-k1 * (y - x0)) * [S_13(x0, y)]^(1 - k2).
+This arises from the product of the well-to-ill survival to age y and the
+ratio of Siler survival functions raised to the (1 - k2) power, which
+accounts for the differential mortality between the well and ill states.
 }
 \keyword{internal}

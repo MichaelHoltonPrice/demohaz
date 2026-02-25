@@ -33,6 +33,15 @@ cutoff) and the well-to-dead transition (baseline mortality).
 Computes the probability of staying in the well state from age x0 to age x.
 When x0 = 0, this is: p_11(0, x) = exp(-k1 * min(x_cut, x)) * S_13(0, x)
 
-This is the probability of staying in the well state, which requires 
-surviving both the well-to-ill transition and the baseline mortality hazard.
+This is the probability of staying in the well state, which requires
+surviving both the well-to-ill transition and the baseline mortality hazard
+(S_13, the Siler survival function).
+}
+\examples{
+b_siler <- c(0.175, 1.40, 0.00368, 38.1, 0.0917)
+p_11(c(10, 30, 60), k1 = 0.02, b_siler = b_siler)
+
+# With cutoff: well-to-ill transitions stop after age 6
+p_11(c(3, 6, 10), k1 = 0.02, b_siler = b_siler, x_cut = 6)
+
 }

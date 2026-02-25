@@ -24,4 +24,10 @@ The integrand value at y
 \description{
 Helper function for computing the integral in q_2(x0, x; w).
 }
+\details{
+The integrand is: exp(-k1 * (y - x0)) * [S_13(0, y)]^(1 - k2).
+This has the same mathematical form as p_12_integrand but uses S_13(0, y)
+(survival from birth) rather than S_13(x0, y) (survival from x0), because
+the q_2 formula factors the S_13 terms differently.
+}
 \keyword{internal}

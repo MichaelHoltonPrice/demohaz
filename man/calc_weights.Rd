@@ -44,6 +44,8 @@ well state at birth. They are used in calculating the weighted age-at-death
 densities for analyses restricted to individuals who survive to age x0.
 
 At age 0, returns c(1, 0) since everyone starts in the well state.
+Returns c(NA, NA) if the numerical integration in p_12 fails or if the
+total survival probability is zero or negative.
 }
 \examples{
 # Example parameter values

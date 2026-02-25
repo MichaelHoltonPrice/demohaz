@@ -9,8 +9,11 @@ q_2(x, w, k1, k2, b_siler, x0 = 0, x_cut = Inf)
 \arguments{
 \item{x}{The age at which to evaluate the occupancy probability (can be vector)}
 
-\item{w}{A vector of length 2 containing [w_1(x0), w_2(x0)], the state 
-weights at age x0. If NULL, computed using calc_weights.}
+\item{w}{Optional weight vector [w_1(x0), w_2(x0)], the proportion of
+living individuals who are well vs ill at age x0. If NULL (default),
+weights are computed using calc_weights, which assumes disease etiology
+unfolds from birth. To assume everyone starts in the well state at x0,
+pass w = c(1, 0).}
 
 \item{k1}{The constant transition rate from the healthy state to the ill
 state (before x_cut)}
@@ -36,6 +39,25 @@ already ill at x0 and survived, plus individuals who transitioned from well
 to ill between x0 and x.
 }
 \details{
-Computes the occupancy probability based on three cases with integral terms
-for individuals transitioning from well to ill between x0 and min(x, x_cut).
+The occupancy probability q_2 has two additive components:
+- Term 1: w_2 * [S_13(0, x) / S_13(0, x0)]^k2 — individuals already ill at
+  x0 who survive to age x under the elevated ill-state mortality (k2 times
+  baseline).
+- Term 2: w_1 * k1 * [S_13(0, x)]^k2 / S_13(0, x0) * integral — individuals
+  who were well at x0 and transitioned to ill at some intermediate age y,
+  then survived in the ill state to age x.
+
+The integration limits for Term 2 depend on three cases:
+- x_cut <= x0: no transitions possible, Term 2 = 0.
+- x0 < x_cut <= x: integrate from x0 to x_cut.
+- x0 <= x < x_cut: integrate from x0 to x.
+
+Each element of x is processed iteratively because the upper integration
+limit varies. If integrate() fails for a given x value, NA is returned.
+}
+\examples{
+b_siler <- c(0.175, 1.40, 0.00368, 38.1, 0.0917)
+w <- c(1, 0)  # everyone starts well
+q_2(c(10, 30, 60), w = w, k1 = 0.02, k2 = 1.2, b_siler = b_siler)
+
 }

@@ -4,10 +4,11 @@
 \alias{usher3_hessian}
 \title{Calculate the Hessian matrix for the Usher 3 model}
 \usage{
-usher3_hessian(theta, x, ill, x0 = 0, x_cut = Inf)
+usher3_hessian(theta, x, ill, x0 = 0, x_cut = Inf, log_transform = FALSE)
 }
 \arguments{
-\item{theta}{The parameter vector for the Usher illness-death model}
+\item{theta}{The parameter vector for the Usher illness-death model.
+If log_transform=TRUE, this should be log(theta).}
 
 \item{x}{The vector of ages-at-death}
 
@@ -17,10 +18,28 @@ usher3_hessian(theta, x, ill, x0 = 0, x_cut = Inf)
 
 \item{x_cut}{The age at which the well-to-ill transition hazard becomes
 zero [default: Inf]}
+
+\item{log_transform}{If TRUE, compute Hessian with respect to log(theta)
+[default: FALSE]}
 }
 \value{
-The Hessian matrix
+The Hessian matrix (square, dimension = length(theta))
 }
 \description{
 Calculate the Hessian matrix for the Usher 3 model
+}
+\details{
+Uses \code{numDeriv::hessian} to compute the matrix of second partial
+derivatives of the negative log-likelihood with respect to theta (or
+log(theta) when log_transform=TRUE). A small step size (eps = 1e-12) is
+used for the finite-difference approximation. The log-transform option is
+useful for computing standard errors on the log scale, where the
+asymptotic normality assumption is more appropriate for positive parameters.
+}
+\examples{
+b_siler <- c(0.175, 1.40, 0.00368, 38.1, 0.0917)
+th <- c(0.02, 1.2, b_siler)
+samp <- sample_usher3(200, th, 0.01, 120)
+H <- usher3_hessian(th, samp$x, samp$ill)
+
 }

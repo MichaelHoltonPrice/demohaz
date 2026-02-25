@@ -49,7 +49,7 @@ Siler documentation)}
 
 \item{report_period}{The reporting period for verbose output [default: 50]}
 
-\item{use_gompertz}{Whether to use Gompert-Makeham mortality [default: FAlSE]}
+\item{use_gompertz}{Whether to use Gompertz-Makeham mortality [default: FALSE]}
 
 \item{tune}{Whether to perform Nelder-Mead tuning after tempering [default: TRUE]}
 
@@ -57,17 +57,56 @@ Siler documentation)}
 [default: list(maxit = 10000, reltol = 1e-12, abstol = 1e-12)]. 
 See ?optim for available options.}
 
-\item{...}{Additional arguments passed to obj_fun, including x (ages), 
-ill (illness indicators), x0 (conditional starting age, default 0), 
+\item{...}{Additional arguments passed to the objective function
+(\code{\link{nll_usher3}}), including x (ages-at-death vector),
+ill (illness indicators), x0 (conditional starting age, default 0),
 and x_cut (age cutoff for transitions, default Inf)}
 }
 \value{
-A list containing the results of tempering and tuning
+A list with components:
+  \describe{
+    \item{obj_fun}{The objective function used (nll_usher3_optim_wrapper)}
+    \item{th0}{The initial parameter vector}
+    \item{optional_inputs}{List of optional arguments used}
+    \item{temper}{Full output from par_temper}
+    \item{th_temper}{Best parameter vector from tempering (natural scale)}
+    \item{optim_result}{Output from optim() (only when tune=TRUE)}
+    \item{th_bar}{Best log-transformed parameter vector (only when tune=TRUE)}
+    \item{th}{Best parameter vector on the natural scale (final result)}
+  }
 }
 \description{
 If the flag use_gompertz is True, then the infant mortality hazard is
 assumed to be zero and the parameter vector, th0, should only have five
+terms (k1, k2, and three mortality parameters). If necessary, th0 is subset
 from 7 to 5 terms if use_gompertz is TRUE. If the scaling matrix,
-prop_scale_mat, is specified when use_gommpertz is True its dimensions must
+prop_scale_mat, is specified when use_gompertz is True its dimensions must
 match the reduced length of the parameter vector.
+}
+\details{
+Fitting proceeds in two stages, both operating on the log-transformed
+parameter space (th_bar = log(th)) so that all parameters are
+unconstrained:
+
+1. **Parallel tempering**: Runs \code{\link{par_temper}} with multiple
+   temperature chains to explore the parameter space broadly and avoid
+   local minima. The best parameter vector across all chains is selected.
+
+2. **Nelder-Mead tuning** (when tune=TRUE): Refines the tempering result
+   using \code{\link[stats]{optim}} with method "Nelder-Mead" and tight
+   convergence tolerances. This polishes the solution to high precision.
+
+If prop_scale_mat is NULL, a default proposal scaling matrix is
+constructed from the initial parameter vector, with scales ranging from
+0.001 to 0.1 across the temperature ladder.
+}
+\examples{
+\dontrun{
+b_siler <- c(0.175, 1.40, 0.00368, 38.1, 0.0917)
+th <- c(0.02, 1.2, b_siler)
+samp <- sample_usher3(1000, th, 0.01, 120)
+result <- temper_and_tune_usher3(th, x = samp$x, ill = samp$ill)
+result$th  # recovered parameters
+}
+
 }

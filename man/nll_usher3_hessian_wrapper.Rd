@@ -22,5 +22,8 @@ zero [default: Inf]}
 The negative log-likelihood value
 }
 \description{
-Wrapper function for the negative log-likelihood of the Usher 3 model
+Thin wrapper around \code{\link{nll_usher3}} that uses parameter names
+(paramVect, ageVect, illVect) that do not collide with \code{numDeriv}'s
+internal use of \code{x} as the differentiation variable.
 }
+\keyword{internal}

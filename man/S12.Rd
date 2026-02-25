@@ -37,3 +37,11 @@ usher3_integrand.
 Future extensions could support piecewise constant hazards with multiple
 breakpoints and different hazard rates in each interval.
 }
+\examples{
+# Probability of remaining healthy (not transitioning to ill)
+S12(c(5, 10, 20), k1 = 0.02)
+
+# With cutoff: survival plateaus after x_cut
+S12(c(3, 6, 10), k1 = 0.02, x_cut = 6)
+
+}

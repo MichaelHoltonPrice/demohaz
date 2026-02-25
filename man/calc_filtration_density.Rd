@@ -9,15 +9,34 @@ calc_filtration_density(xcalc, x_mid, infant_prop, discrete = T)
 \arguments{
 \item{xcalc}{The vector of ages for calculation}
 
-\item{x_mid}{The midpoint age for the filtration density}
+\item{x_mid}{The mode (peak) age of the triangular density}
 
-\item{infant_prop}{The proportion of infants in the filtration density}
+\item{infant_prop}{The ratio of the density at age 0 to the density at
+x_mid. Controls the asymmetry of the triangle: infant_prop = 1 gives a
+symmetric triangle; infant_prop < 1 gives a density that rises to x_mid.}
 
-\item{discrete}{Whether to return a discrete density [default: TRUE]}
+\item{discrete}{Whether to return a discrete density that sums to 1
+[default: TRUE]. If FALSE, returns the continuous piecewise-linear density.}
 }
 \value{
-The age filtration density
+The age filtration density evaluated at xcalc. If discrete=TRUE,
+  the values sum to 1; if discrete=FALSE, they integrate to approximately 1
+  (exactly 1 in the continuous limit).
 }
 \description{
 Calculate the age filtration density
+}
+\details{
+Constructs a piecewise-linear (triangular) density over the interval
+[0, 2 * x_mid]. The density is zero outside this interval. The peak is at
+x_mid with height z_mid = 1 / (x_mid * (1 + infant_prop)). At age 0 the
+density is z_inf = infant_prop * z_mid. The density linearly interpolates
+between z_inf at 0 and z_mid at x_mid, then between z_mid at x_mid and
+z_inf at 2 * x_mid. This is used to model the age-at-death distribution
+of an archaeological assemblage when filtering rejection-sampled data.
+}
+\examples{
+xcalc <- seq(0, 120, by = 0.1)
+f <- calc_filtration_density(xcalc, x_mid = 30, infant_prop = 0.5)
+
 }

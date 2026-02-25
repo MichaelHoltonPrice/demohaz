@@ -4,10 +4,11 @@
 \alias{usher3_errors}
 \title{Calculate standard errors, z-scores, and p-values for the Usher 3 model}
 \usage{
-usher3_errors(theta, x, ill, x0 = 0, x_cut = Inf)
+usher3_errors(theta, x, ill, x0 = 0, x_cut = Inf, log_transform = FALSE)
 }
 \arguments{
-\item{theta}{The parameter vector for the Usher illness-death model}
+\item{theta}{The parameter vector for the Usher illness-death model.
+If log_transform=TRUE, this should be log(theta).}
 
 \item{x}{The vector of ages-at-death}
 
@@ -17,10 +18,50 @@ usher3_errors(theta, x, ill, x0 = 0, x_cut = Inf)
 
 \item{x_cut}{The age at which the well-to-ill transition hazard becomes
 zero [default: Inf]}
+
+\item{log_transform}{If TRUE, compute errors with respect to log(theta)
+[default: FALSE]}
 }
 \value{
-A data frame with standard errors, z-scores, and p-values
+A data frame with rows named by parameter and columns:
+  \describe{
+    \item{Estimate}{The parameter estimates (theta values)}
+    \item{StandErr}{Standard errors from the inverse Hessian}
+    \item{z}{Z-scores: (estimate - against) / SE. NA for untestable
+      parameters.}
+    \item{pval}{P-values from the standard normal. NA for untestable
+      parameters.}
+    \item{against}{Null hypothesis value for each parameter}
+    \item{sideAdj}{Side adjustment (1 = one-sided, 2 = two-sided)}
+  }
 }
 \description{
 Calculate standard errors, z-scores, and p-values for the Usher 3 model
+}
+\details{
+Standard errors are computed from the observed Fisher information matrix:
+SE = sqrt(diag(H^{-1})), where H is the Hessian of the negative
+log-likelihood. Z-scores test each parameter against a null hypothesis
+value, and p-values are computed from the standard normal distribution.
+
+The null hypothesis values (the "against" column) depend on the
+parameterization:
+- Untransformed: k1 tested against 0 (one-sided, is there illness?),
+  k2 tested against 1 (two-sided, does illness affect mortality?),
+  Siler parameters tested against 0 (one-sided).
+- Log-transformed: log(k2) tested against 0 (equivalent to k2 = 1);
+  log(k1) and log(Siler params) are not tested (against = NA) because
+  they are necessarily positive and a zero null is not meaningful on the
+  log scale.
+
+The sideAdjustment vector controls one-sided (1) vs two-sided (2) tests.
+k2 uses a two-sided test because deviations in either direction from 1
+are meaningful; all other testable parameters use one-sided tests.
+}
+\examples{
+b_siler <- c(0.175, 1.40, 0.00368, 38.1, 0.0917)
+th <- c(0.02, 1.2, b_siler)
+samp <- sample_usher3(500, th, 0.01, 120)
+usher3_errors(th, samp$x, samp$ill)
+
 }

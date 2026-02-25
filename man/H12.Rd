@@ -38,3 +38,11 @@ The function is vectorized over x.
 Future extensions could support piecewise constant hazards with multiple
 breakpoints and different hazard rates in each interval.
 }
+\examples{
+# Standard constant hazard (x_cut = Inf)
+H12(c(5, 10, 20), k1 = 0.02)
+
+# With cutoff at age 6 (e.g., LEH)
+H12(c(3, 6, 10), k1 = 0.02, x_cut = 6)
+
+}

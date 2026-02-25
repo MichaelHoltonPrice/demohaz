@@ -2,7 +2,7 @@
 % Please edit documentation in R/usher3.R
 \name{sample_usher3}
 \alias{sample_usher3}
-\title{Sample from the Usher 3 distribution using importance sampling}
+\title{Sample from the Usher 3 distribution using rejection sampling}
 \usage{
 sample_usher3(
   N,
@@ -19,18 +19,23 @@ sample_usher3(
 \arguments{
 \item{N}{The number of samples to generate.}
 
-\item{th}{A vector of parameters for the Usher model.}
+\item{th}{The parameter vector with ordering [k1, k2, b_siler], where
+b_siler is the five-parameter Siler mortality vector (see
+\code{\link{hsiler}}).}
 
-\item{dx}{The spacing for the discretized sampling.}
+\item{dx}{The grid spacing used to evaluate and validate the densities.
+Must be small enough that rho1 + rho2 integrates to 1 within area_tol.}
 
-\item{xmax}{The maximum age for the discretized sampling.}
+\item{xmax}{The maximum age for the sampling grid. Must be large enough
+that the density is negligible beyond xmax.}
 
-\item{x_mid}{The midpoint age for age filtration (optional).}
+\item{x_mid}{The midpoint age for age filtration (optional, default NA).}
 
-\item{infant_prop}{The proportion of infants for age filtration (optional).}
+\item{infant_prop}{The proportion of infants for age filtration (optional,
+default NA).}
 
-\item{area_tol}{The tolerance for checking the area under the density
-curves (default: 1e-6).}
+\item{area_tol}{The tolerance for checking that rho1 + rho2 integrates
+to 1 [default: 1e-6]. An error is thrown if the check fails.}
 
 \item{x0}{The conditional starting age [default: 0]}
 
@@ -39,16 +44,38 @@ zero [default: Inf]. When x_cut = Inf, this reduces to the standard
 constant hazard model.}
 }
 \value{
-A list containing the sampled ages (x), illness indicators (ill),
-  and the calculated densities (rho1 and rho2).
+A list with components:
+  \describe{
+    \item{x}{Numeric vector of length N: sampled ages at death}
+    \item{ill}{Logical vector of length N: TRUE if ill at death}
+    \item{rho1}{The well-at-death density evaluated on the grid}
+    \item{rho2}{The ill-at-death density evaluated on the grid}
+  }
 }
 \description{
 This function generates samples from the Usher 3 distribution using
-importance sampling. It allows for optional age filtration based on a
-specified midpoint age and infant proportion.
+rejection (acceptance-rejection) sampling. It allows for optional age
+filtration based on a specified midpoint age and infant proportion.
+}
+\details{
+The algorithm proceeds in two phases:
+
+1. **Validation**: Evaluates rho1 and rho2 on a grid from 0 to xmax with
+   spacing dx, then checks via trapezoidal integration that rho1 + rho2
+   integrates to 1 (within area_tol). This ensures that dx is fine enough
+   and xmax is large enough to capture the full density.
+
+2. **Rejection sampling**: Draws candidate points (x_samp, y_samp) uniformly
+   from the rectangle [0, 1.1*xmax] x [0, 1.1*max(rho1+rho2)]. If
+   y_samp <= rho1(x_samp), the point is accepted as a well-at-death sample;
+   else if y_samp <= rho1(x_samp) + rho2(x_samp), it is accepted as an
+   ill-at-death sample; otherwise it is rejected. When age filtration is
+   active, the densities are multiplied by the filtration density before
+   comparison. NA values in rho1/rho2 (from numerical integration failure)
+   are treated as 0.
 }
 \examples{
-th <- c(2e-2, 1.2, 0.175, 1.40, 0.368, 0.01, 0.075, 0.001, 0.917, 0.1)
-sample_usher3(100, th, 0.01, 120)
+th <- c(2e-2, 1.2, 0.175, 1.40, 0.00368, 38.1, 0.0917)
+samp <- sample_usher3(100, th, 0.01, 120)
 
 }
