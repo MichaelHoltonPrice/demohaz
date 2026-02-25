@@ -188,3 +188,95 @@ test_that("forward simulation matches rejection sampler (x_cut = 6)", {
   prop_imp <- mean(imp$ill)
   expect_lt(abs(prop_sim - prop_imp), 0.03)
 })
+
+# ---------------------------------------------------------------------------
+# Tests 3–4: age filtration (x_mid / infant_prop)
+#
+# The forward simulation produces unfiltered samples from rho1 + rho2.
+# To compare against the filtered rejection sampler, we apply post-hoc
+# rejection to the forward simulation output: accept each simulated death
+# at age x with probability f_filt(x) / max(f_filt), preserving illness
+# status.  The accepted samples then follow (rho1 + rho2) * f_filt — the
+# same target as the filtered rejection sampler.
+# ---------------------------------------------------------------------------
+test_that("forward simulation matches rejection sampler with age filtration (x_cut = Inf)", {
+  set.seed(24680)
+  N_sim <- 50000   # large, to have enough survivors after filtering
+  dt <- 0.01
+  dx <- 0.001
+  xmax <- 120
+  x_mid <- 50
+  infant_prop <- 0.1
+
+  # --- Forward simulation (unfiltered) ---
+  sim <- simulate_usher3_forward(N_sim, th0, dt, xmax, x_cut = Inf)
+
+  # --- Post-hoc age filtration of forward simulation samples ---
+  f_filt <- calc_filtration_density(sim$x, x_mid, infant_prop, discrete = FALSE)
+  accept_prob <- f_filt / max(f_filt)
+  keep <- runif(N_sim) < accept_prob
+  sim_filt_x   <- sim$x[keep]
+  sim_filt_ill <- sim$ill[keep]
+  N_filtered <- length(sim_filt_x)
+
+  # --- Filtered rejection sampler ---
+  rej <- sample_usher3(N_filtered, th0, dx, xmax,
+                        x_mid = x_mid, infant_prop = infant_prop)
+
+  # Split each sample by illness status at death
+  sim_well <- sim_filt_x[!sim_filt_ill]
+  sim_ill  <- sim_filt_x[sim_filt_ill]
+  rej_well <- rej$x[!rej$ill]
+  rej_ill  <- rej$x[rej$ill]
+
+  # Two-sample KS tests
+  expect_gt(ks.test(sim_well, rej_well)$p.value, 0.05)
+  expect_gt(ks.test(sim_ill, rej_ill)$p.value, 0.05)
+
+  # Proportion ill at death
+  prop_sim <- mean(sim_filt_ill)
+  prop_rej <- mean(rej$ill)
+  expect_lt(abs(prop_sim - prop_rej), 0.02)
+})
+
+test_that("forward simulation matches rejection sampler with age filtration (x_cut = 6)", {
+  set.seed(13579)
+  N_sim <- 50000
+  dt <- 0.01
+  dx <- 0.001
+  xmax <- 120
+  x_cut <- 6
+  x_mid <- 50
+  infant_prop <- 0.1
+
+  # --- Forward simulation (unfiltered, with finite x_cut) ---
+  sim <- simulate_usher3_forward(N_sim, th0, dt, xmax, x_cut = x_cut)
+
+  # --- Post-hoc age filtration of forward simulation samples ---
+  f_filt <- calc_filtration_density(sim$x, x_mid, infant_prop, discrete = FALSE)
+  accept_prob <- f_filt / max(f_filt)
+  keep <- runif(N_sim) < accept_prob
+  sim_filt_x   <- sim$x[keep]
+  sim_filt_ill <- sim$ill[keep]
+  N_filtered <- length(sim_filt_x)
+
+  # --- Filtered rejection sampler ---
+  rej <- sample_usher3(N_filtered, th0, dx, xmax,
+                        x_cut = x_cut,
+                        x_mid = x_mid, infant_prop = infant_prop)
+
+  # Split each sample by illness status at death
+  sim_well <- sim_filt_x[!sim_filt_ill]
+  sim_ill  <- sim_filt_x[sim_filt_ill]
+  rej_well <- rej$x[!rej$ill]
+  rej_ill  <- rej$x[rej$ill]
+
+  # Two-sample KS tests
+  expect_gt(ks.test(sim_well, rej_well)$p.value, 0.05)
+  expect_gt(ks.test(sim_ill, rej_ill)$p.value, 0.05)
+
+  # Proportion ill at death
+  prop_sim <- mean(sim_filt_ill)
+  prop_rej <- mean(rej$ill)
+  expect_lt(abs(prop_sim - prop_rej), 0.02)
+})
